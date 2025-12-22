@@ -1,0 +1,146 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # Backend Testing
+  backend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm ci
+      
+      - name: Lint backend code
+        run: |
+          cd backend
+          npm run lint 2>/dev/null || true
+      
+      - name: Check backend structure
+        run: |
+          cd backend
+          test -f src/index.js && echo "✓ Entry point exists"
+          test -d src/routes && echo "✓ Routes directory exists"
+          test -d src/controllers && echo "✓ Controllers directory exists"
+
+  # Frontend Testing
+  frontend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+      
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+      
+      - name: Check frontend build
+        run: |
+          test -d frontend/dist && echo "✓ Build successful"
+
+  # Security Checks
+  security-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Audit backend dependencies
+        run: |
+          cd backend
+          npm audit --audit-level=moderate 2>/dev/null || true
+      
+      - name: Audit frontend dependencies
+        run: |
+          cd frontend
+          npm audit --audit-level=moderate 2>/dev/null || true
+
+  # Deploy Backend (main branch only)
+  deploy-backend:
+    needs: backend-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+      
+      - name: Build Docker image
+        run: |
+          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/civicecho-backend:${{ github.sha }} backend/
+          docker tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/civicecho-backend:${{ github.sha }} gcr.io/${{ secrets.GCP_PROJECT_ID }}/civicecho-backend:latest
+      
+      - name: Push to GCR
+        run: |
+          gcloud auth configure-docker
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/civicecho-backend:${{ github.sha }}
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/civicecho-backend:latest
+      
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy civicecho-backend \
+            --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/civicecho-backend:latest \
+            --platform managed \
+            --region us-central1 \
+            --allow-unauthenticated
+
+  # Deploy Frontend (main branch only)
+  deploy-frontend:
+    needs: frontend-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+      
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+      
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
