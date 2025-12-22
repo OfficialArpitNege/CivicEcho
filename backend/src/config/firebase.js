@@ -38,10 +38,10 @@ if (useEmulator) {
   // PRODUCTION/STAGING: Connect to real Firebase
   console.log('🌐 Connecting to real Firebase services');
 
-  if (!process.env.FIREBASE_PRIVATE_KEY) {
+  if (!process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_CLIENT_EMAIL || !process.env.FIREBASE_PROJECT_ID) {
     throw new Error(
-      '❌ FIREBASE_PRIVATE_KEY not provided. For production, provide real Firebase credentials.\n' +
-      'For local development, set FIREBASE_MODE=emulator and ensure Firebase Emulator Suite is running.'
+      '❌ FIREBASE_PRIVATE_KEY, FIREBASE_CLIENT_EMAIL, or FIREBASE_PROJECT_ID not provided. For production, provide real Firebase credentials (from service account JSON, see docs).' +
+      '\nFor local development, set FIREBASE_MODE=emulator and ensure Firebase Emulator Suite is running.'
     );
   }
 
