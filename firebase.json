@@ -12,9 +12,12 @@
       "enabled": true,
       "host": "localhost",
       "port": 4000
-    }
+    },
+    "singleProjectMode": true
   },
   "firestore": {
+    "database": "(default)",
+    "location": "asia-east1",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   }
