@@ -17,6 +17,7 @@ import {
 import { db } from '../config/firebase';
 import { reverseGeocodeWithSessionCache } from './geocodingService';
 import { awardPoints, POINTS } from './firestoreUserService';
+import { determineCategoryFromText, determineSeverityFromText } from '../utils/nlpHelpers';
 
 // Cache for user emails to avoid repeated Firestore queries
 const userEmailCache = new Map();
@@ -82,8 +83,8 @@ export const createComplaint = async (userId, userEmail, complaintData) => {
       upvotes: 0,
       upvoters: [],
       assignedResolver: null,
-      category: complaintData.category || 'other',
-      severity: complaintData.severity || 'medium',
+      category: determineCategoryFromText(complaintData.description),
+      severity: determineSeverityFromText(complaintData.description),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
