@@ -68,8 +68,8 @@ const server = app.listen(PORT, async () => {
   try {
     await setupAuthorityUser();
   } catch (error) {
-    console.error('⚠️ Warning: Could not setup authority user:', error.message);
-    // Don't crash - continue running even if setup fails
+    console.error('⚠️ Could not setup authority user:', error.message);
+    console.log('💡 Make sure Firebase Emulator is running. You can still login manually if user exists.');
   }
 });
 
