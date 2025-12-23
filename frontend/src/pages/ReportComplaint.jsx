@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useGeolocation, useVoiceRecording } from '../hooks/useCustom';
 import { complaintService } from '../services/complaintService';
-import { FiMapPin, FiMic, FiSend, FiAlertCircle } from 'react-icons/fi';
+import { FiMapPin, FiMic, FiSend, FiAlertCircle, FiCamera, FiX } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 
 export default function ReportComplaint() {
@@ -26,10 +26,41 @@ export default function ReportComplaint() {
   const [description, setDescription] = useState('');
   const [complaintType, setComplaintType] = useState('text');
   const [loading, setLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
 
   useEffect(() => {
     getCurrentLocation();
   }, [getCurrentLocation]);
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCameraCapture = () => {
+    cameraInputRef.current?.click();
+  };
+
+  const handleGallerySelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -58,12 +89,14 @@ export default function ReportComplaint() {
         complaintType,
         userId: user.uid,
         audioUrl: null,
+        imageUrl: null,
       };
 
       const response = await complaintService.createComplaint(complaintData);
       toast.success('Complaint submitted successfully!');
       setDescription('');
       setComplaintType('text');
+      removeImage();
     } catch (error) {
       toast.error('Failed to submit complaint: ' + error.message);
     } finally {
@@ -161,6 +194,66 @@ export default function ReportComplaint() {
               rows="4"
               required
             />
+          </div>
+
+          {/* Image Upload Section */}
+          <div>
+            <label className="block text-gray-700 font-medium mb-3">Attach Photo (Optional)</label>
+            <div className="flex gap-3 mb-4">
+              <button
+                type="button"
+                onClick={handleCameraCapture}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              >
+                <FiCamera className="w-4 h-4" />
+                📷 Take Photo
+              </button>
+              <button
+                type="button"
+                onClick={handleGallerySelect}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+              >
+                🖼️ Gallery
+              </button>
+            </div>
+
+            {/* Hidden File Inputs */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+
+            {/* Image Preview */}
+            {imagePreview && (
+              <div className="relative bg-gray-100 rounded-lg overflow-hidden">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="w-full h-48 object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition"
+                >
+                  <FiX className="w-4 h-4" />
+                </button>
+                <p className="text-gray-700 text-sm p-3 bg-gray-50">
+                  ✓ Image selected: {selectedImage?.name}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Voice Recording Section */}

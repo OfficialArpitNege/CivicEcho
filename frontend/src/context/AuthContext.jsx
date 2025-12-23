@@ -81,14 +81,17 @@ export const AuthProvider = ({ children }) => {
           const role = profileResponse.data.data.role;
           console.log(`✅ Login successful - Role: ${role}`);
           setUserRole(role);
+          setUser(userCredential.user);
         } else {
           console.warn(`⚠️ No role found in API response, falling back to Firestore...`);
           await fetchUserRole(userCredential.user.uid);
+          setUser(userCredential.user);
         }
       } catch (error) {
         console.error('❌ Error updating user profile on login:', error);
         // Still try to fetch from Firestore as fallback
         await fetchUserRole(userCredential.user.uid);
+        setUser(userCredential.user);
       }
       
       return userCredential;
@@ -119,14 +122,17 @@ export const AuthProvider = ({ children }) => {
           const role = profileResponse.data.data.role;
           console.log(`✅ Signup successful - Role: ${role}`);
           setUserRole(role);
+          setUser(userCredential.user);
         } else {
           console.warn(`⚠️ No role found in API response, falling back to Firestore...`);
           await fetchUserRole(userCredential.user.uid);
+          setUser(userCredential.user);
         }
       } catch (error) {
         console.error('❌ Error creating user profile:', error);
         // Still try to fetch from Firestore as fallback
         await fetchUserRole(userCredential.user.uid);
+        setUser(userCredential.user);
       }
       
       return userCredential;
