@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import authorityAPI from '../services/authorityAPI';
 import { FiMapPin, FiUser, FiX } from 'react-icons/fi';
 import { toast } from 'react-toastify';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 export default function AuthorityDashboard() {
   const { user, isAuthority, loading: authLoading } = useAuth();
@@ -13,6 +15,10 @@ export default function AuthorityDashboard() {
   const [editingResolver, setEditingResolver] = useState({});
   const [selectedImage, setSelectedImage] = useState(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [mapModalOpen, setMapModalOpen] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const mapRef = useRef(null);
+  const mapInstance = useRef(null);
 
   const [allIssues, setAllIssues] = useState([]);
 
@@ -108,6 +114,57 @@ export default function AuthorityDashboard() {
     setImageModalOpen(false);
     setSelectedImage(null);
   };
+
+  const openMapModal = (location) => {
+    setSelectedLocation(location);
+    setMapModalOpen(true);
+  };
+
+  const closeMapModal = () => {
+    setMapModalOpen(false);
+    if (mapInstance.current) {
+      mapInstance.current.remove();
+      mapInstance.current = null;
+    }
+  };
+
+  // Initialize map when modal opens
+  useEffect(() => {
+    if (mapModalOpen && selectedLocation && mapRef.current) {
+      // Cleanup old map if exists
+      if (mapInstance.current) {
+        mapInstance.current.remove();
+      }
+
+      // Create new map
+      const map = L.map(mapRef.current).setView(
+        [selectedLocation.latitude, selectedLocation.longitude],
+        15
+      );
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19,
+      }).addTo(map);
+
+      // Add marker
+      L.marker([selectedLocation.latitude, selectedLocation.longitude])
+        .addTo(map)
+        .bindPopup(
+          `<div class="font-semibold">${selectedLocation.address || 'Complaint Location'}</div>`
+        )
+        .openPopup();
+
+      mapInstance.current = map;
+
+      return () => {
+        if (mapInstance.current) {
+          mapInstance.current.remove();
+          mapInstance.current = null;
+        }
+      };
+    }
+  }, [mapModalOpen, selectedLocation]);
 
   if (authLoading) {
     return (
@@ -229,17 +286,21 @@ export default function AuthorityDashboard() {
                             {issue.severity}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center text-sm text-gray-600 max-w-xs">
-                            <FiMapPin className="mr-2 flex-shrink-0" />
-                            <span title={issue.location?.address || `Lat: ${issue.location?.latitude}, Lon: ${issue.location?.longitude}`}>
+                        <td className="px-6 py-4 min-w-max">
+                          <button
+                            onClick={() => openMapModal(issue.location)}
+                            className="flex items-center text-sm text-blue-600 hover:text-blue-800 hover:underline transition group"
+                            title="Click to view on map"
+                          >
+                            <FiMapPin className="mr-2 flex-shrink-0 group-hover:text-blue-800" />
+                            <span>
                               {issue.location?.address ? (
-                                issue.location.address.substring(0, 25) + (issue.location.address.length > 25 ? '...' : '')
+                                issue.location.address.substring(0, 35) + (issue.location.address.length > 35 ? '...' : '')
                               ) : (
                                 `${issue.location?.latitude?.toFixed(4)}, ${issue.location?.longitude?.toFixed(4)}`
                               )}
                             </span>
-                          </div>
+                          </button>
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm">
@@ -395,6 +456,45 @@ export default function AuthorityDashboard() {
               <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
                 <button
                   onClick={closeImageModal}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Map Modal */}
+        {mapModalOpen && selectedLocation && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">📍 Location Map</h3>
+                <button
+                  onClick={closeMapModal}
+                  className="text-gray-500 hover:text-gray-700 transition"
+                >
+                  <FiX className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6">
+                <div ref={mapRef} className="w-full h-96 rounded-lg border border-gray-300"></div>
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-900 font-medium">📌 {selectedLocation.address || 'Complaint Location'}</p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Coordinates: {selectedLocation.latitude.toFixed(6)}, {selectedLocation.longitude.toFixed(6)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
+                <button
+                  onClick={closeMapModal}
                   className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
                 >
                   Close
