@@ -2,6 +2,7 @@ const { db } = require('../config/firebase');
 const { analyzeComplaint, calculateTextSimilarity } = require('./nlpService');
 const { calculateDistance } = require('../utils/helpers');
 const { CLUSTERING } = require('../utils/constants');
+const axios = require('axios');
 
 /**
  * Create a new complaint in Firestore
@@ -291,7 +292,7 @@ module.exports = {
  */
 async function reverseGeocode(latitude, longitude) {
   try {
-    const response = await require('axios').get('https://nominatim.openstreetmap.org/reverse', {
+    const response = await axios.get('https://nominatim.openstreetmap.org/reverse', {
       params: {
         lat: latitude,
         lon: longitude,

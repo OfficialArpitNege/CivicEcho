@@ -31,14 +31,23 @@ const handleCreateComplaint = async (req, res) => {
       return res.status(400).json({ error: 'Invalid coordinates' });
     }
 
+    // Check image size (max 5MB for base64)
+    if (imageBase64 && imageBase64.length > 5 * 1024 * 1024) {
+      return res.status(400).json({
+        error: 'Image is too large. Maximum size is 5MB.',
+      });
+    }
+
     // Try to reverse geocode the coordinates to get address
     let address = null;
-    try {
-      address = await reverseGeocode(latitude, longitude);
-      console.log(`📍 Geocoded address: ${address}`);
-    } catch (error) {
-      console.warn(`⚠️ Could not reverse geocode coordinates: ${error.message}`);
-      // Continue without address - it's not critical
+    if (process.env.NODE_ENV !== 'emulator') {
+      try {
+        address = await reverseGeocode(latitude, longitude);
+        console.log(`📍 Geocoded address: ${address}`);
+      } catch (error) {
+        console.warn(`⚠️ Could not reverse geocode coordinates: ${error.message}`);
+        // Continue without address - it's not critical
+      }
     }
 
     const complaintData = {
