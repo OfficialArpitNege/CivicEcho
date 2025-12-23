@@ -12,23 +12,28 @@ export default function AuthorityDashboard() {
   const [actionLoading, setActionLoading] = useState({});
   const [editingResolver, setEditingResolver] = useState({});
 
+  const [allIssues, setAllIssues] = useState([]);
+
   useEffect(() => {
     if (user && isAuthority()) {
-      loadIssues();
+      loadAllIssues();
     }
   }, [user, isAuthority]);
 
-  const loadIssues = async () => {
+  useEffect(() => {
+    if (filter === 'all') {
+      setIssues(allIssues);
+    } else {
+      setIssues(allIssues.filter(issue => issue.status === filter));
+    }
+  }, [filter, allIssues]);
+
+  const loadAllIssues = async () => {
     try {
       setLoading(true);
       const response = await authorityAPI.getAllIssues();
-      
-      let filtered = response.data || [];
-      if (filter !== 'all') {
-        filtered = filtered.filter(issue => issue.status === filter);
-      }
-      
-      setIssues(filtered);
+      const issuesList = response.data || [];
+      setAllIssues(issuesList);
     } catch (error) {
       console.error('Error loading issues:', error);
       toast.error('Failed to load issues: ' + error.message);
@@ -42,8 +47,8 @@ export default function AuthorityDashboard() {
     try {
       setActionLoading(prev => ({ ...prev, [issueId]: 'status' }));
       await authorityAPI.updateIssueStatus(issueId, newStatus);
-      toast.success(`Issue status updated to ${newStatus}`);
-      await loadIssues();
+      toast.success(`✅ Status updated to ${newStatus}`);
+      await loadAllIssues();
     } catch (error) {
       console.error('Error updating status:', error);
       toast.error('Failed to update status');
@@ -64,9 +69,9 @@ export default function AuthorityDashboard() {
     try {
       setActionLoading(prev => ({ ...prev, [issueId]: 'assign' }));
       await authorityAPI.assignResolver(issueId, resolverName);
-      toast.success('Resolver assigned successfully');
+      toast.success(`✅ Resolver "${resolverName}" assigned successfully`);
       setEditingResolver(prev => ({ ...prev, [issueId]: '' }));
-      await loadIssues();
+      await loadAllIssues();
     } catch (error) {
       console.error('Error assigning resolver:', error);
       toast.error('Failed to assign resolver');
@@ -123,33 +128,53 @@ export default function AuthorityDashboard() {
           <p className="text-gray-600">Manage and resolve civic issues</p>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="mb-6 flex gap-2 flex-wrap">
-          {[
-            { key: 'all', label: 'All Issues', icon: '📋' },
-            { key: 'reported', label: 'Reported', icon: '🆕' },
-            { key: 'in_progress', label: 'In Progress', icon: '⏳' },
-            { key: 'resolved', label: 'Resolved', icon: '✓' },
-          ].map(({ key, label, icon }) => (
-            <button
-              key={key}
-              onClick={() => setFilter(key)}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
-                filter === key
-                  ? 'bg-indigo-600 text-white shadow-lg'
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              {icon} {label}
-            </button>
-          ))}
+        {/* Filter Tabs & Refresh Button */}
+        <div className="mb-6 flex gap-2 flex-wrap items-center justify-between">
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { key: 'all', label: 'All Issues', icon: '📋' },
+              { key: 'reported', label: 'Reported', icon: '🆕' },
+              { key: 'in_progress', label: 'In Progress', icon: '⏳' },
+              { key: 'resolved', label: 'Resolved', icon: '✓' },
+            ].map(({ key, label, icon }) => (
+              <button
+                key={key}
+                onClick={() => setFilter(key)}
+                className={`px-4 py-2 rounded-lg font-medium transition ${
+                  filter === key
+                    ? 'bg-indigo-600 text-white shadow-lg'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                }`}
+              >
+                {icon} {label}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={loadAllIssues}
+            disabled={loading}
+            className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50 transition"
+          >
+            {loading ? '⏳ Loading...' : '🔄 Refresh'}
+          </button>
         </div>
 
         {/* Issues Table */}
         <div className="bg-white rounded-lg shadow-xl overflow-hidden">
-          {issues.length === 0 ? (
+          {issues.length === 0 && allIssues.length === 0 ? (
             <div className="p-12 text-center">
-              <p className="text-gray-500 text-lg">No issues found</p>
+              <p className="text-gray-500 text-lg">📭 No issues reported yet</p>
+              <p className="text-gray-400 text-sm mt-2">Check back later for new complaints</p>
+            </div>
+          ) : issues.length === 0 ? (
+            <div className="p-12 text-center">
+              <p className="text-gray-500 text-lg">🔍 No issues with status "{filter}"</p>
+              <button
+                onClick={() => setFilter('all')}
+                className="mt-4 px-4 py-2 text-indigo-600 hover:text-indigo-700 font-medium"
+              >
+                View all issues
+              </button>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -175,10 +200,10 @@ export default function AuthorityDashboard() {
                     return (
                       <tr key={issue.issueId} className="hover:bg-gray-50">
                         <td className="px-6 py-4">
-                          <div className="font-medium text-gray-900 max-w-xs truncate">
+                          <div className="font-medium text-gray-900 max-w-xs truncate" title={issue.title}>
                             {issue.title}
                           </div>
-                          <p className="text-sm text-gray-500 mt-1">
+                          <p className="text-sm text-gray-500 mt-1 max-w-xs truncate" title={issue.description}>
                             {issue.description?.substring(0, 80)}...
                           </p>
                         </td>
@@ -193,9 +218,15 @@ export default function AuthorityDashboard() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center text-sm text-gray-600">
-                            <FiMapPin className="mr-2" />
-                            {issue.location?.address || `${issue.location?.latitude?.toFixed(4)}, ${issue.location?.longitude?.toFixed(4)}`}
+                          <div className="flex items-center text-sm text-gray-600 max-w-xs">
+                            <FiMapPin className="mr-2 flex-shrink-0" />
+                            <span title={issue.location?.address || 'Location'}>
+                              {issue.location?.address ? (
+                                issue.location.address.substring(0, 25) + (issue.location.address.length > 25 ? '...' : '')
+                              ) : (
+                                `${issue.location?.latitude?.toFixed(2)}, ${issue.location?.longitude?.toFixed(2)}`
+                              )}
+                            </span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -233,21 +264,22 @@ export default function AuthorityDashboard() {
                               <div className="flex gap-2">
                                 <input
                                   type="text"
-                                  placeholder="Officer/Dept"
+                                  placeholder="Officer/Dept name"
                                   value={editingResolver[issue.issueId] || ''}
                                   onChange={(e) => setEditingResolver(prev => ({
                                     ...prev,
                                     [issue.issueId]: e.target.value
                                   }))}
                                   disabled={actionLoading[issue.issueId]}
-                                  className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:bg-gray-100"
                                 />
                                 <button
                                   onClick={() => handleAssignResolver(issue.issueId)}
                                   disabled={actionLoading[issue.issueId] === 'assign'}
-                                  className="px-3 py-1 bg-indigo-600 text-white rounded text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+                                  className="px-3 py-2 bg-indigo-600 text-white rounded text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:bg-gray-400 transition"
+                                  title="Assign this officer/department to handle the issue"
                                 >
-                                  {actionLoading[issue.issueId] === 'assign' ? '...' : 'Assign'}
+                                  {actionLoading[issue.issueId] === 'assign' ? '...' : '✓'}
                                 </button>
                               </div>
                             )}
@@ -258,7 +290,7 @@ export default function AuthorityDashboard() {
                                 value={issue.status}
                                 onChange={(e) => handleStatusChange(issue.issueId, e.target.value)}
                                 disabled={actionLoading[issue.issueId]}
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                                className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:bg-gray-100 transition"
                               >
                                 <option value="reported">📋 Reported</option>
                                 <option value="in_progress">⏳ In Progress</option>
@@ -285,12 +317,12 @@ export default function AuthorityDashboard() {
         {/* Stats Footer */}
         <div className="mt-8 grid grid-cols-4 gap-4">
           {[
-            { label: 'Total Issues', count: issues.length, icon: '📊' },
-            { label: 'Reported', count: issues.filter(i => i.status === 'reported').length, icon: '🆕' },
-            { label: 'In Progress', count: issues.filter(i => i.status === 'in_progress').length, icon: '⏳' },
-            { label: 'Resolved', count: issues.filter(i => i.status === 'resolved').length, icon: '✓' },
+            { label: 'Total Issues', count: allIssues.length, icon: '📊' },
+            { label: 'Reported', count: allIssues.filter(i => i.status === 'reported').length, icon: '🆕' },
+            { label: 'In Progress', count: allIssues.filter(i => i.status === 'in_progress').length, icon: '⏳' },
+            { label: 'Resolved', count: allIssues.filter(i => i.status === 'resolved').length, icon: '✓' },
           ].map(stat => (
-            <div key={stat.label} className="bg-white rounded-lg p-4 shadow text-center">
+            <div key={stat.label} className="bg-white rounded-lg p-4 shadow text-center hover:shadow-lg transition">
               <div className="text-2xl mb-2">{stat.icon}</div>
               <p className="text-gray-600 text-sm font-medium">{stat.label}</p>
               <p className="text-2xl font-bold text-gray-900">{stat.count}</p>
