@@ -19,6 +19,7 @@ const axios = require('axios');
 const handleCreateComplaint = async (req, res) => {
   try {
     const { description, latitude, longitude, complaintType, audioUrl, userId, imageBase64 } = req.body;
+    console.log(`[CONTROLLER DEBUG] Incoming complaint - Description: "${description?.substring(0, 50)}...", Type: ${complaintType}`);
 
     // Validation
     if (!description || !latitude || !longitude || !userId) {
@@ -187,16 +188,16 @@ const handleUpdateComplaintStatus = async (req, res) => {
     // Validate status values - Accept both old and new formats
     const validStatuses = ['PENDING', 'VERIFIED', 'RESOLVED', 'reported', 'in_progress', 'resolved'];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ 
-        error: `Invalid status. Must be one of: PENDING, VERIFIED, RESOLVED` 
+      return res.status(400).json({
+        error: `Invalid status. Must be one of: PENDING, VERIFIED, RESOLVED`
       });
     }
 
     // Prevent changing back to PENDING
     const existing = await getComplaintById(id);
     if (status === 'PENDING' && existing.status !== 'PENDING') {
-      return res.status(400).json({ 
-        error: 'Cannot change status back to PENDING' 
+      return res.status(400).json({
+        error: 'Cannot change status back to PENDING'
       });
     }
 

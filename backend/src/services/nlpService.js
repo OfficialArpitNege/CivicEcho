@@ -14,6 +14,8 @@ const analyzeComplaint = async (text) => {
       const category = determineCategoryFromText(text);
       const severity = determineSeverityFromText(text);
 
+      console.log(`[NLP DEBUG] Text-only category: ${category}, severity: ${severity}`);
+
       return {
         category: category || 'other',
         severity: severity || 'low',
@@ -38,6 +40,9 @@ const analyzeComplaint = async (text) => {
 
     // Determine severity based on sentiment and entities
     const severity = determineSeverityFromSentiment(sentimentResponse, text);
+
+    console.log(`[NLP DEBUG] AI Results - Category: ${category}, Severity: ${severity}`);
+    console.log(`[NLP DEBUG] Detected Entities: ${entityResponse.entities.map(e => e.name).join(', ')}`);
 
     return {
       category,
@@ -77,33 +82,54 @@ const determineCategoryFromText = (text, entities = []) => {
   const categoryKeywords = {
     [ISSUE_CATEGORIES.WATER]: [
       'water', 'leak', 'burst', 'pipe', 'flooding', 'wet', 'drainage', 'sewage',
-      'tap', 'supply', 'drinking', 'muddy', 'puddle', 'overflow', 'plumbing'
+      'tap', 'supply', 'drinking', 'muddy', 'puddle', 'overflow', 'plumbing',
+      'drain', 'gutter', 'hydrant', 'sprinkler', 'dam', 'well', 'reservoir',
+      'tank', 'valve', 'main', 'spill', 'wash', 'sink', 'toilet', 'shower',
+      'line', 'canal', 'stream', 'pond', 'wetland', 'sump', 'pump', 'meter'
     ],
     [ISSUE_CATEGORIES.GARBAGE]: [
       'garbage', 'waste', 'trash', 'litter', 'dump', 'dirty', 'dustbin', 'refuse',
-      'rubbish', 'cleaning', 'smell', 'odor', 'stink', 'sanitation', 'debris'
+      'rubbish', 'cleaning', 'smell', 'odor', 'stink', 'sanitation', 'debris',
+      'pile', 'bin', 'receptacle', 'compost', 'recycling', 'stench', 'unhygienic',
+      'scrap', 'junk', 'mess', 'clutter', 'disposal', 'pickup', 'truck', 'landfill',
+      'overflowing', 'fly-tipping', 'plastic', 'bottle', 'can', 'bag'
     ],
     [ISSUE_CATEGORIES.ROAD]: [
       'road', 'pothole', 'crack', 'asphalt', 'pavement', 'damaged', 'street',
-      'traffic', 'signal', 'sign', 'lane', 'bump', 'surface', 'footpath', 'sidewalk'
+      'traffic', 'signal', 'sign', 'lane', 'bump', 'surface', 'footpath', 'sidewalk',
+      'driveway', 'alley', 'highway', 'intersection', 'crossing', 'zebra',
+      'barrier', 'curb', 'kerb', 'hole', 'dent', 'uneven', 'concrete', 'paving',
+      'marking', 'lighting', 'light', 'lamp', 'post', 'bridge', 'overpass', 'tunnel'
     ],
     [ISSUE_CATEGORIES.POWER]: [
       'power', 'electricity', 'outage', 'blackout', 'light', 'electric', 'voltage',
-      'wire', 'cable', 'pole', 'transformer', 'switch', 'current', 'spark', 'dark'
+      'wire', 'cable', 'pole', 'transformer', 'switch', 'current', 'spark', 'dark',
+      'short', 'fuse', 'generator', 'panel', 'station', 'pylon', 'grid', 'supply',
+      'cut', 'interruption', 'failure', 'shock', 'hanging', 'down', 'dead'
     ],
     [ISSUE_CATEGORIES.SAFETY]: [
       'safety', 'dangerous', 'hazard', 'broken', 'accident', 'risk', 'threat',
-      'fire', 'smoke', 'suspicious', 'crime', 'theft', 'assault', 'unsafe', 'security'
+      'fire', 'smoke', 'suspicious', 'crime', 'theft', 'assault', 'unsafe', 'security',
+      'danger', 'emergency', 'help', 'police', 'weapon', 'fight', 'argument',
+      'harassment', 'abuse', 'falling', 'unstable', 'structurally', 'collapse',
+      'poison', 'toxic', 'chemical', 'gas', 'explosion', 'blast', 'noise'
     ],
   };
+
+  console.log(`[NLP DEBUG] Analyzing text: "${lowerText.substring(0, 50)}..."`);
+  if (entities.length > 0) {
+    console.log(`[NLP DEBUG] AI Entities found: ${entityNames.join(', ')}`);
+  }
 
   // Check keywords against combined text (original text + entity names)
   for (const [category, keywords] of Object.entries(categoryKeywords)) {
     if (keywords.some((keyword) => combinedText.includes(keyword))) {
+      console.log(`[NLP DEBUG] Match found! Category: ${category} (triggered by keyword match)`);
       return category;
     }
   }
 
+  console.log(`[NLP DEBUG] No specific match found. Defaulting to: ${ISSUE_CATEGORIES.OTHER}`);
   return ISSUE_CATEGORIES.OTHER;
 };
 
