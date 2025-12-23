@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { complaintService } from '../services/complaintService';
+import { getAllComplaints } from '../services/firestoreComplaintService';
 import { FiFilter, FiMapPin } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 
@@ -47,9 +47,14 @@ export default function MapView() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const filters = filter === 'all' ? {} : { status: filter };
-      const response = await complaintService.getAllComplaints(filters);
-      setComplaints(response.data || []);
+      const allComplaints = await getAllComplaints();
+      
+      // Filter by status if not 'all'
+      const filtered = filter === 'all' 
+        ? allComplaints 
+        : allComplaints.filter(complaint => complaint.status === filter);
+      
+      setComplaints(filtered);
     } catch (error) {
       toast.error('Failed to load complaints: ' + error.message);
     } finally {

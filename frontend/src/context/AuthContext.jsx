@@ -6,8 +6,7 @@ import {
   signOut 
 } from 'firebase/auth';
 import { auth, db } from '../config/firebase';
-import { doc, getDoc } from 'firebase/firestore';
-import apiClient from '../services/api';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const AuthContext = createContext();
 
@@ -16,40 +15,55 @@ export const AuthProvider = ({ children }) => {
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Authority email whitelist
+  const AUTHORITY_EMAILS = ['authority@civicecho.gov'];
+
   // Function to fetch user role from Firestore
-  const fetchUserRole = async (uid) => {
+  const fetchUserRole = async (uid, email) => {
     try {
       const userDoc = await getDoc(doc(db, 'users', uid));
       if (userDoc.exists()) {
         const role = userDoc.data().role || 'citizen';
-        console.log(`👤 User role fetched: ${role} (${uid})`);
+        console.log(`👤 User role fetched from Firestore: ${role} (${uid})`);
         setUserRole(role);
         return role;
       } else {
-        console.warn(`⚠️ User profile not found in Firestore (${uid})`);
-        setUserRole('citizen');
-        return 'citizen';
+        // User doesn't exist in Firestore yet, determine role from email
+        const role = AUTHORITY_EMAILS.includes(email?.toLowerCase()) ? 'authority' : 'citizen';
+        
+        // Create user profile in Firestore
+        await setDoc(doc(db, 'users', uid), {
+          uid,
+          email,
+          name: email?.split('@')[0] || 'User',
+          role,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+        
+        console.log(`✅ Created user profile in Firestore with role: ${role}`);
+        setUserRole(role);
+        return role;
       }
     } catch (error) {
-      console.error('Error fetching user role:', error);
+      console.error('❌ Error fetching user role:', error);
       setUserRole('citizen');
       return 'citizen';
     }
   };
 
   useEffect(() => {
-    console.log('🔐 Auth Context Initialized - Using Real Firebase');
+    console.log('🔐 Auth Context Initialized - Using Firebase Client SDK');
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-        const token = await currentUser.getIdToken();
-        localStorage.setItem('authToken', token);
+        console.log(`✅ User authenticated: ${currentUser.email}`);
         
-        // Fetch user role from Firestore
-        await fetchUserRole(currentUser.uid);
+        // Fetch role from Firestore
+        await fetchUserRole(currentUser.uid, currentUser.email);
         setUser(currentUser);
       } else {
-        localStorage.removeItem('authToken');
+        console.log('🔓 User logged out');
         setUser(null);
         setUserRole(null);
       }
@@ -66,33 +80,9 @@ export const AuthProvider = ({ children }) => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       console.log(`✅ Authentication successful, UID: ${userCredential.user.uid}`);
       
-      // Ensure user profile exists in Firestore (role assigned server-side)
-      try {
-        console.log(`📡 Fetching user profile from API...`);
-        const profileResponse = await apiClient.post('/users/profile', {
-          uid: userCredential.user.uid,
-          email: userCredential.user.email,
-        });
-        
-        console.log(`📦 API Response:`, profileResponse.data);
-        
-        // Immediately set the role from the API response
-        if (profileResponse.data && profileResponse.data.data && profileResponse.data.data.role) {
-          const role = profileResponse.data.data.role;
-          console.log(`✅ Login successful - Role: ${role}`);
-          setUserRole(role);
-          setUser(userCredential.user);
-        } else {
-          console.warn(`⚠️ No role found in API response, falling back to Firestore...`);
-          await fetchUserRole(userCredential.user.uid);
-          setUser(userCredential.user);
-        }
-      } catch (error) {
-        console.error('❌ Error updating user profile on login:', error);
-        // Still try to fetch from Firestore as fallback
-        await fetchUserRole(userCredential.user.uid);
-        setUser(userCredential.user);
-      }
+      // Fetch user role from Firestore
+      await fetchUserRole(userCredential.user.uid, userCredential.user.email);
+      setUser(userCredential.user);
       
       return userCredential;
     } finally {
@@ -107,33 +97,9 @@ export const AuthProvider = ({ children }) => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       console.log(`✅ Account created, UID: ${userCredential.user.uid}`);
       
-      // Create user profile in Firestore (role assigned server-side based on email whitelist)
-      try {
-        console.log(`📡 Creating user profile in API...`);
-        const profileResponse = await apiClient.post('/users/profile', {
-          uid: userCredential.user.uid,
-          email,
-        });
-        
-        console.log(`📦 API Response:`, profileResponse.data);
-        
-        // Immediately set the role from the API response
-        if (profileResponse.data && profileResponse.data.data && profileResponse.data.data.role) {
-          const role = profileResponse.data.data.role;
-          console.log(`✅ Signup successful - Role: ${role}`);
-          setUserRole(role);
-          setUser(userCredential.user);
-        } else {
-          console.warn(`⚠️ No role found in API response, falling back to Firestore...`);
-          await fetchUserRole(userCredential.user.uid);
-          setUser(userCredential.user);
-        }
-      } catch (error) {
-        console.error('❌ Error creating user profile:', error);
-        // Still try to fetch from Firestore as fallback
-        await fetchUserRole(userCredential.user.uid);
-        setUser(userCredential.user);
-      }
+      // Fetch/create user role from Firestore
+      await fetchUserRole(userCredential.user.uid, userCredential.user.email);
+      setUser(userCredential.user);
       
       return userCredential;
     } finally {
@@ -143,8 +109,9 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     await signOut(auth);
-    localStorage.removeItem('authToken');
     setUserRole(null);
+    setUser(null);
+    console.log('🔓 User logged out');
   };
 
   // Helper functions for role checking

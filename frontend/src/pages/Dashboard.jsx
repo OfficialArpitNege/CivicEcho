@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { complaintService, dashboardService } from '../services/complaintService';
+import { 
+  getDashboardStats, 
+  getPriorityIssues, 
+  updateComplaint, 
+  deleteComplaint, 
+  upvoteComplaint 
+} from '../services/firestoreComplaintService';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { FiTrendingUp, FiAlertTriangle, FiCheckCircle, FiClock } from 'react-icons/fi';
 import { toast } from 'react-toastify';
@@ -31,13 +37,13 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [statsResponse, issuesResponse] = await Promise.all([
-        dashboardService.getStats(),
-        dashboardService.getPriorityIssues(),
+      const [statsData, issuesData] = await Promise.all([
+        getDashboardStats(),
+        getPriorityIssues(),
       ]);
 
-      setStats(statsResponse.data);
-      setPriorityIssues(issuesResponse.data || []);
+      setStats(statsData);
+      setPriorityIssues(issuesData || []);
     } catch (error) {
       toast.error('Failed to load dashboard: ' + error.message);
     } finally {
@@ -53,7 +59,7 @@ export default function Dashboard() {
     if (!newDescription || newDescription === issue.description) return;
 
     try {
-      await complaintService.updateComplaint(issue.id, { description: newDescription });
+      await updateComplaint(issue.id, { description: newDescription });
       toast.success('Complaint updated successfully');
       loadDashboardData();
     } catch (error) {
@@ -66,7 +72,7 @@ export default function Dashboard() {
     if (!confirmed) return;
 
     try {
-      await complaintService.deleteComplaint(issue.id);
+      await deleteComplaint(issue.id);
       toast.success('Complaint deleted successfully');
       loadDashboardData();
     } catch (error) {
@@ -76,8 +82,7 @@ export default function Dashboard() {
 
   const handleUpvote = async (issue) => {
     try {
-      const response = await complaintService.upvoteComplaint(issue.id, user.uid);
-      const updated = response.data;
+      const updated = await upvoteComplaint(issue.id, user.uid);
 
       setPriorityIssues((prev) =>
         prev.map((i) => (i.id === updated.id ? { ...i, upvotes: updated.upvotes } : i))

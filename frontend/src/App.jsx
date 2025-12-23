@@ -13,7 +13,6 @@ import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import AuthorityDashboard from './pages/AuthorityDashboard';
 import ReportComplaint from './pages/ReportComplaint';
-import MapView from './pages/MapView';
 
 // CSS
 import './index.css';
@@ -71,16 +70,6 @@ function App() {
               <ProtectedRoute>
                 <CitizenRoute>
                   <ReportComplaint />
-                </CitizenRoute>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/map"
-            element={
-              <ProtectedRoute>
-                <CitizenRoute>
-                  <MapView />
                 </CitizenRoute>
               </ProtectedRoute>
             }

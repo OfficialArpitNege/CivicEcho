@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useGeolocation, useVoiceRecording } from '../hooks/useCustom';
-import { complaintService } from '../services/complaintService';
+import { createComplaint } from '../services/firestoreComplaintService';
 import { FiMapPin, FiMic, FiSend, FiAlertCircle, FiCamera, FiX } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 
@@ -87,12 +87,10 @@ export default function ReportComplaint() {
         latitude: location.latitude,
         longitude: location.longitude,
         complaintType,
-        userId: user.uid,
-        audioUrl: null,
         imageBase64: imagePreview || null,
       };
 
-      const response = await complaintService.createComplaint(complaintData);
+      await createComplaint(user.uid, user.email, complaintData);
       toast.success('✅ Complaint submitted successfully!');
       setDescription('');
       setComplaintType('text');

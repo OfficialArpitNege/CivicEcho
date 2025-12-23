@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import authorityAPI from '../services/authorityAPI';
+import { 
+  getAllComplaints, 
+  updateComplaintStatus, 
+  assignResolver 
+} from '../services/firestoreComplaintService';
 import { FiMapPin, FiUser, FiX } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import L from 'leaflet';
@@ -39,8 +43,7 @@ export default function AuthorityDashboard() {
   const loadAllIssues = async () => {
     try {
       setLoading(true);
-      const response = await authorityAPI.getAllIssues();
-      const issuesList = response.data || [];
+      const issuesList = await getAllComplaints();
       setAllIssues(issuesList);
     } catch (error) {
       console.error('Error loading issues:', error);
@@ -54,7 +57,7 @@ export default function AuthorityDashboard() {
   const handleStatusChange = async (issueId, newStatus) => {
     try {
       setActionLoading(prev => ({ ...prev, [issueId]: 'status' }));
-      await authorityAPI.updateIssueStatus(issueId, newStatus);
+      await updateComplaintStatus(issueId, newStatus);
       toast.success(`✅ Status updated to ${newStatus}`);
       await loadAllIssues();
     } catch (error) {
@@ -76,7 +79,7 @@ export default function AuthorityDashboard() {
 
     try {
       setActionLoading(prev => ({ ...prev, [issueId]: 'assign' }));
-      await authorityAPI.assignResolver(issueId, resolverName);
+      await assignResolver(issueId, resolverName);
       toast.success(`✅ Resolver "${resolverName}" assigned successfully`);
       setEditingResolver(prev => ({ ...prev, [issueId]: '' }));
       await loadAllIssues();
@@ -130,7 +133,7 @@ export default function AuthorityDashboard() {
 
   // Initialize map when modal opens
   useEffect(() => {
-    if (mapModalOpen && selectedLocation && mapRef.current) {
+    if (mapModalOpen && selectedLocation && selectedLocation.latitude && selectedLocation.longitude && mapRef.current) {
       // Cleanup old map if exists
       if (mapInstance.current) {
         mapInstance.current.remove();
@@ -269,11 +272,11 @@ export default function AuthorityDashboard() {
                     return (
                       <tr key={issue.issueId} className="hover:bg-gray-50">
                         <td className="px-6 py-4">
-                          <div className="font-medium text-gray-900 max-w-xs truncate" title={issue.title}>
-                            {issue.title}
+                          <div className="font-medium text-gray-900 max-w-xs truncate" title={issue.description}>
+                            {issue.description?.substring(0, 40)}
                           </div>
                           <p className="text-sm text-gray-500 mt-1 max-w-xs truncate" title={issue.description}>
-                            {issue.description?.substring(0, 80)}...
+                            {issue.description?.substring(40, 120)}...
                           </p>
                         </td>
                         <td className="px-6 py-4">
@@ -288,24 +291,24 @@ export default function AuthorityDashboard() {
                         </td>
                         <td className="px-6 py-4 min-w-max">
                           <button
-                            onClick={() => openMapModal(issue.location)}
+                            onClick={() => openMapModal({ latitude: issue.latitude, longitude: issue.longitude, address: issue.address })}
                             className="flex items-center text-sm text-blue-600 hover:text-blue-800 hover:underline transition group"
                             title="Click to view on map"
                           >
                             <FiMapPin className="mr-2 flex-shrink-0 group-hover:text-blue-800" />
                             <span>
-                              {issue.location?.address ? (
-                                issue.location.address.substring(0, 35) + (issue.location.address.length > 35 ? '...' : '')
+                              {issue.address ? (
+                                issue.address.substring(0, 35) + (issue.address.length > 35 ? '...' : '')
                               ) : (
-                                `${issue.location?.latitude?.toFixed(4)}, ${issue.location?.longitude?.toFixed(4)}`
+                                `${issue.latitude?.toFixed(4)}, ${issue.longitude?.toFixed(4)}`
                               )}
                             </span>
                           </button>
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm">
-                            <p className="font-medium text-gray-900">{issue.reportedBy?.name}</p>
-                            <p className="text-gray-500">{issue.reportedBy?.email}</p>
+                            <p className="font-medium text-gray-900">{issue.userEmail || 'Unknown User'}</p>
+                            <p className="text-gray-500 text-xs">{issue.userId?.substring(0, 12)}...</p>
                           </div>
                         </td>
                         <td className="px-6 py-4">
