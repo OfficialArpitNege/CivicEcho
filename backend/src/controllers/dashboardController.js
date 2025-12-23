@@ -161,4 +161,47 @@ module.exports = {
   handleGetDashboardStats,
   handleGetHeatmapData,
   handleGetPriorityIssues,
+  handleGetMyComplaints,
+};
+
+/**
+ * Get user's own complaints
+ * GET /api/dashboard/my-complaints
+ */
+const handleGetMyComplaints = async (req, res) => {
+  try {
+    const userId = req.user?.uid;
+
+    if (!userId) {
+      return res.status(401).json({
+        error: 'Unauthorized - User not authenticated',
+      });
+    }
+
+    // Get all complaints for this user
+    const snapshot = await db.collection('complaints').where('userId', '==', userId).get();
+
+    const myComplaints = snapshot.docs.map((doc) => ({
+      issueId: doc.id,
+      ...doc.data(),
+    }));
+
+    // Sort by created date (newest first)
+    myComplaints.sort((a, b) => {
+      const aTime = a.createdAt?.toMillis?.() || new Date(a.createdAt).getTime();
+      const bTime = b.createdAt?.toMillis?.() || new Date(b.createdAt).getTime();
+      return bTime - aTime;
+    });
+
+    res.status(200).json({
+      success: true,
+      data: myComplaints,
+    });
+  } catch (error) {
+    console.error('Error in handleGetMyComplaints:', error);
+    res.status(500).json({
+      error: 'Failed to fetch your complaints',
+      details: error.message,
+    });
+  }
 };

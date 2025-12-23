@@ -97,4 +97,12 @@ export const dashboardService = {
     const response = await apiClient.get('/dashboard/priority');
     return response.data;
   },
+
+  /**
+   * Get user's own complaints
+   */
+  getMyComplaints: async () => {
+    const response = await apiClient.get('/dashboard/my-complaints');
+    return response.data;
+  },
 };

@@ -3,6 +3,7 @@ const {
   handleGetDashboardStats,
   handleGetHeatmapData,
   handleGetPriorityIssues,
+  handleGetMyComplaints,
 } = require('../controllers/dashboardController');
 const { verifyToken } = require('../middleware/auth');
 
@@ -22,5 +23,10 @@ router.get('/heatmap', handleGetHeatmapData);
  * GET /api/dashboard/priority - Priority-ranked issues
  */
 router.get('/priority', verifyToken, handleGetPriorityIssues);
+
+/**
+ * GET /api/dashboard/my-complaints - User's own complaints
+ */
+router.get('/my-complaints', verifyToken, handleGetMyComplaints);
 
 module.exports = router;

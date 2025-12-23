@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { complaintService, dashboardService } from '../services/complaintService';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { FiTrendingUp, FiAlertTriangle, FiCheckCircle, FiClock } from 'react-icons/fi';
+import { FiTrendingUp, FiAlertTriangle, FiCheckCircle, FiClock, FiMapPin } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
@@ -11,24 +11,30 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState(null);
   const [priorityIssues, setPriorityIssues] = useState([]);
+  const [myComplaints, setMyComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
       loadDashboardData();
+      // Refresh my complaints every 10 seconds
+      const interval = setInterval(loadDashboardData, 10000);
+      return () => clearInterval(interval);
     }
   }, [user]);
 
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [statsResponse, issuesResponse] = await Promise.all([
+      const [statsResponse, issuesResponse, myComplaintsResponse] = await Promise.all([
         dashboardService.getStats(),
         dashboardService.getPriorityIssues(),
+        dashboardService.getMyComplaints(),
       ]);
 
       setStats(statsResponse.data);
       setPriorityIssues(issuesResponse.data || []);
+      setMyComplaints(myComplaintsResponse.data || []);
     } catch (error) {
       toast.error('Failed to load dashboard: ' + error.message);
     } finally {
@@ -218,6 +224,85 @@ export default function Dashboard() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
+
+        {/* My Complaints Section */}
+        <div className="card mb-8">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">📋 My Complaints & Status</h2>
+          {myComplaints.length > 0 ? (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {myComplaints.map((complaint) => {
+                const statusColors = {
+                  reported: 'bg-blue-100 text-blue-800',
+                  in_progress: 'bg-yellow-100 text-yellow-800',
+                  resolved: 'bg-green-100 text-green-800',
+                };
+                const statusIcons = {
+                  reported: '📋',
+                  in_progress: '⏳',
+                  resolved: '✓',
+                };
+
+                return (
+                  <div
+                    key={complaint.issueId}
+                    className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-300 transition"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-gray-900">
+                            {complaint.title || complaint.description?.substring(0, 50)}
+                          </h3>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[complaint.status] || 'bg-gray-100'}`}>
+                            {statusIcons[complaint.status]} {complaint.status?.replace('_', ' ').toUpperCase()}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">{complaint.description?.substring(0, 100)}...</p>
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <FiMapPin className="w-4 h-4" />
+                            {complaint.address || `${complaint.latitude?.toFixed(4)}, ${complaint.longitude?.toFixed(4)}`}
+                          </span>
+                          <span className="px-2 py-1 bg-gray-200 rounded text-gray-700 font-medium">
+                            {complaint.category?.replace('_', ' ').toUpperCase()}
+                          </span>
+                          <span className={`px-2 py-1 rounded font-medium ${
+                            complaint.severity === 'CRITICAL' ? 'bg-red-100 text-red-700' :
+                            complaint.severity === 'HIGH' ? 'bg-orange-100 text-orange-700' :
+                            complaint.severity === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-green-100 text-green-700'
+                          }`}>
+                            {complaint.severity}
+                          </span>
+                        </div>
+                        {complaint.assignedResolver && (
+                          <p className="text-xs text-blue-600 mt-2">
+                            👤 Assigned to: <strong>{complaint.assignedResolver}</strong>
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <div className="mb-3">
+                          <p className="text-sm font-semibold text-gray-700">👍 {complaint.upvotes || 0}</p>
+                          <p className="text-xs text-gray-500">upvotes</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleUpvote(complaint)}
+                          className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition"
+                        >
+                          Support
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-8">📭 No complaints submitted yet. <a href="/report" className="text-blue-600 hover:underline">Submit one now!</a></p>
+          )}
         </div>
 
         {/* Priority Issues */}
