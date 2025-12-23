@@ -30,7 +30,7 @@ try {
       connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
       connectFirestoreEmulator(db, 'localhost', 8090);
       console.log('✅ Emulator Auth: http://localhost:9099');
-      console.log('✅ Emulator Firestore: localhost:8080');
+      console.log('✅ Emulator Firestore: localhost:8090');
     } catch (e) {
       // Emulator already connected or error connecting
       console.error('⚠️ Emulator connection error:', e.message);

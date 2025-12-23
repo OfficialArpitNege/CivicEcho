@@ -15,6 +15,14 @@ if (useEmulator) {
   // LOCAL DEVELOPMENT: Connect to Firebase Emulator Suite
   console.log('🔥 Connecting to Firebase Emulator Suite');
   
+  // Connect to emulator instances (Admin SDK expects FIRESTORE_EMULATOR_HOST)
+  const FIREBASE_AUTH_EMULATOR_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST || 'localhost:9099';
+  const FIREBASE_FIRESTORE_EMULATOR_HOST = process.env.FIREBASE_FIRESTORE_EMULATOR_HOST || 'localhost:8080';
+
+  process.env.FIREBASE_AUTH_EMULATOR_HOST = FIREBASE_AUTH_EMULATOR_HOST;
+  process.env.FIREBASE_FIRESTORE_EMULATOR_HOST = FIREBASE_FIRESTORE_EMULATOR_HOST;
+  process.env.FIRESTORE_EMULATOR_HOST = FIREBASE_FIRESTORE_EMULATOR_HOST;
+
   // Use default credentials for emulator
   if (!admin.apps.length) {
     admin.initializeApp({
@@ -24,13 +32,6 @@ if (useEmulator) {
 
   db = admin.firestore();
   auth = admin.auth();
-
-  // Connect to emulator instances
-  const FIREBASE_AUTH_EMULATOR_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST || 'localhost:9099';
-  const FIREBASE_FIRESTORE_EMULATOR_HOST = process.env.FIREBASE_FIRESTORE_EMULATOR_HOST || 'localhost:8080';
-
-  process.env.FIREBASE_AUTH_EMULATOR_HOST = FIREBASE_AUTH_EMULATOR_HOST;
-  process.env.FIREBASE_FIRESTORE_EMULATOR_HOST = FIREBASE_FIRESTORE_EMULATOR_HOST;
 
   console.log(`✅ Emulator Auth: ${FIREBASE_AUTH_EMULATOR_HOST}`);
   console.log(`✅ Emulator Firestore: ${FIREBASE_FIRESTORE_EMULATOR_HOST}`);

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useGeolocation, useVoiceRecording } from '../hooks/useCustom';
 import { complaintService } from '../services/complaintService';
@@ -6,7 +7,20 @@ import { FiMapPin, FiMic, FiSend, FiAlertCircle } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 
 export default function ReportComplaint() {
-  const { user } = useAuth();
+  const { user, userRole, loading: authLoading } = useAuth();
+  
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-600 font-medium">Loading...</p>
+      </div>
+    );
+  }
+
+  // Only citizens can report complaints
+  if (!user || userRole === 'authority') {
+    return <Navigate to="/" replace />;
+  }
   const { location, error: geoError, getCurrentLocation } = useGeolocation();
   const { isRecording, audioBlob, error: audioError, startRecording, stopRecording } = useVoiceRecording();
   const [description, setDescription] = useState('');
@@ -157,11 +171,12 @@ export default function ReportComplaint() {
               <div className="flex gap-4 justify-center">
                 <button
                   type="button"
-                  onClick={startRecording}
-                  disabled={isRecording}
-                  className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                  onClick={() => {
+                    toast.info('Voice recording is not available yet. Please use text description for now.');
+                  }}
+                  className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                 >
-                  {isRecording ? 'Recording...' : 'Start Recording'}
+                  Start Recording
                 </button>
                 <button
                   type="button"

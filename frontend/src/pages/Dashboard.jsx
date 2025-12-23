@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { dashboardService } from '../services/complaintService';
+import { complaintService, dashboardService } from '../services/complaintService';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { FiTrendingUp, FiAlertTriangle, FiCheckCircle, FiClock } from 'react-icons/fi';
 import { toast } from 'react-toastify';
@@ -33,6 +33,48 @@ export default function Dashboard() {
       toast.error('Failed to load dashboard: ' + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEditComplaint = async (issue) => {
+    const newDescription = window.prompt(
+      'Update complaint description',
+      issue.description || ''
+    );
+    if (!newDescription || newDescription === issue.description) return;
+
+    try {
+      await complaintService.updateComplaint(issue.id, { description: newDescription });
+      toast.success('Complaint updated successfully');
+      loadDashboardData();
+    } catch (error) {
+      toast.error('Failed to update complaint: ' + error.message);
+    }
+  };
+
+  const handleDeleteComplaint = async (issue) => {
+    const confirmed = window.confirm('Are you sure you want to delete this complaint?');
+    if (!confirmed) return;
+
+    try {
+      await complaintService.deleteComplaint(issue.id);
+      toast.success('Complaint deleted successfully');
+      loadDashboardData();
+    } catch (error) {
+      toast.error('Failed to delete complaint: ' + error.message);
+    }
+  };
+
+  const handleUpvote = async (issue) => {
+    try {
+      const response = await complaintService.upvoteComplaint(issue.id, user.uid);
+      const updated = response.data;
+
+      setPriorityIssues((prev) =>
+        prev.map((i) => (i.id === updated.id ? { ...i, upvotes: updated.upvotes } : i))
+      );
+    } catch (error) {
+      toast.error('Failed to upvote complaint: ' + error.message);
     }
   };
 
@@ -72,8 +114,8 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Authority Dashboard</h1>
-          <p className="text-gray-600">Monitor and manage community issues</p>
+          <h1 className="text-3xl font-bold text-gray-800">Citizen Dashboard</h1>
+          <p className="text-gray-600">View and manage your community issues</p>
         </div>
 
         {/* Stats Cards */}
@@ -189,11 +231,23 @@ export default function Dashboard() {
                   className="flex items-start justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
                 >
                   <div className="flex-1">
-                    <p className="font-medium text-gray-800">{issue.category.replace('_', ' ')}</p>
+                    <p className="font-medium text-gray-800">
+                      {issue.category.replace('_', ' ')}
+                    </p>
                     <p className="text-sm text-gray-600 mt-1">{issue.description}</p>
                     <p className="text-xs text-gray-500 mt-2">
-                      📍 {issue.latitude.toFixed(4)}, {issue.longitude.toFixed(4)}
+                      📍 {issue.address || `${issue.latitude.toFixed(4)}, ${issue.longitude.toFixed(4)}`}
                     </p>
+                    {issue.reportedBy && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {issue.reportedBy === 'me' ? 'Reported by me' : 'Reported by others'}
+                      </p>
+                    )}
+                    {issue.resolverName && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        Resolver: {issue.resolverName}
+                      </p>
+                    )}
                   </div>
                   <div className="ml-4 text-right">
                     <span
@@ -207,7 +261,32 @@ export default function Dashboard() {
                     >
                       {issue.severity}
                     </span>
-                    <p className="text-sm text-gray-600 mt-2">⬆️ {issue.upvotes} upvotes</p>
+                    <button
+                      type="button"
+                      onClick={() => handleUpvote(issue)}
+                      className="text-sm text-blue-600 mt-2 hover:underline"
+                    >
+                      ⬆️ {issue.upvotes} upvotes
+                    </button>
+
+                    {issue.reportedBy === 'me' && (
+                      <div className="mt-3 space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEditComplaint(issue)}
+                          className="btn-secondary text-xs"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteComplaint(issue)}
+                          className="btn-primary text-xs"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))

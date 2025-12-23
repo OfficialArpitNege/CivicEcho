@@ -4,7 +4,7 @@ import { FiHome, FiMap, FiAlertCircle, FiLogOut, FiMenu, FiX } from 'react-icons
 import { useState } from 'react';
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const { user, userRole, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -34,15 +34,17 @@ export default function Navbar() {
               className="flex items-center gap-1 text-gray-700 hover:text-blue-600 transition"
             >
               <FiHome />
-              Dashboard
+              {userRole === 'authority' ? 'Authority Dashboard' : 'Dashboard'}
             </Link>
-            <Link
-              to="/report"
-              className="flex items-center gap-1 text-gray-700 hover:text-blue-600 transition"
-            >
-              <FiAlertCircle />
-              Report Issue
-            </Link>
+            {userRole !== 'authority' && (
+              <Link
+                to="/report"
+                className="flex items-center gap-1 text-gray-700 hover:text-blue-600 transition"
+              >
+                <FiAlertCircle />
+                Report Issue
+              </Link>
+            )}
             <Link
               to="/map"
               className="flex items-center gap-1 text-gray-700 hover:text-blue-600 transition"
@@ -52,6 +54,9 @@ export default function Navbar() {
             </Link>
             <div className="flex items-center gap-3 pl-6 border-l border-gray-200">
               <span className="text-sm text-gray-600">{user.email}</span>
+              {userRole === 'authority' && (
+                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Authority</span>
+              )}
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-1 text-red-600 hover:text-red-700 transition"
@@ -79,15 +84,17 @@ export default function Navbar() {
               className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Dashboard
+              {userRole === 'authority' ? 'Authority Dashboard' : 'Dashboard'}
             </Link>
-            <Link
-              to="/report"
-              className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Report Issue
-            </Link>
+            {userRole !== 'authority' && (
+              <Link
+                to="/report"
+                className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Report Issue
+              </Link>
+            )}
             <Link
               to="/map"
               className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded"

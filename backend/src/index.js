@@ -5,9 +5,17 @@ const dotenv = require('dotenv');
 // Load environment variables
 dotenv.config();
 
+// Log authority email whitelist for debugging
+const AUTHORITY_EMAIL_WHITELIST = process.env.AUTHORITY_EMAIL_WHITELIST
+  ? process.env.AUTHORITY_EMAIL_WHITELIST.split(',').map((email) => email.trim().toLowerCase())
+  : [];
+console.log(`\n👤 Authority Email Whitelist: ${AUTHORITY_EMAIL_WHITELIST.length > 0 ? AUTHORITY_EMAIL_WHITELIST.join(', ') : 'NONE'}\n`);
+
 // Import routes
 const complaintRoutes = require('./routes/complaintRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const userRoutes = require('./routes/userRoutes');
+const authorityRoutes = require('./routes/authorityRoutes');
 
 const app = express();
 
@@ -27,6 +35,8 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/authority', authorityRoutes);
 
 // 404 Handler
 app.use((req, res) => {

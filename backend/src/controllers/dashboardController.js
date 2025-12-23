@@ -1,4 +1,5 @@
 const { db } = require('../config/firebase');
+const axios = require('axios');
 
 /**
  * Get dashboard statistics
@@ -18,9 +19,12 @@ const handleGetDashboardStats = async (req, res) => {
     complaintsSnapshot.forEach((doc) => {
       const data = doc.data();
 
-      statuses[data.status] = (statuses[data.status] || 0) + 1;
-      categories[data.category] = (categories[data.category] || 0) + 1;
-      severities[data.severity] = (severities[data.severity] || 0) + 1;
+      if (data.status)
+        statuses[data.status] = (statuses[data.status] || 0) + 1;
+      if (data.category)
+        categories[data.category] = (categories[data.category] || 0) + 1;
+      if (data.severity)
+        severities[data.severity] = (severities[data.severity] || 0) + 1;
     });
 
     // Get clusters
@@ -90,12 +94,14 @@ const handleGetPriorityIssues = async (req, res) => {
     // Get all complaints and sort/filter client-side
     const snapshot = await db.collection('complaints').get();
 
-    const priorityIssues = snapshot.docs
+    const loggedInUserId = req.user?.uid || null;
+
+    let priorityIssues = snapshot.docs
       .map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }))
-      .filter((item) => item.status !== 'closed')
+      .filter((item) => item.status && item.status !== 'closed')
       .sort((a, b) => {
         // Sort by severity first (descending), then by upvotes
         const severityOrder = { CRITICAL: 3, HIGH: 2, MEDIUM: 1, LOW: 0 };
@@ -104,6 +110,39 @@ const handleGetPriorityIssues = async (req, res) => {
         return bScore - aScore;
       })
       .slice(0, 20);
+
+    priorityIssues = await Promise.all(
+      priorityIssues.map(async (issue) => {
+        let address = issue.address || null;
+
+        if (!address && issue.latitude && issue.longitude) {
+          try {
+            const response = await axios.get('https://nominatim.openstreetmap.org/reverse', {
+              params: {
+                format: 'json',
+                lat: issue.latitude,
+                lon: issue.longitude,
+                zoom: 18,
+                addressdetails: 1,
+              },
+              headers: {
+                'User-Agent': 'CivicEcho/1.0',
+              },
+            });
+            address = response.data?.display_name || null;
+          } catch (geoError) {
+            console.error('Error reverse geocoding priority issue:', geoError.message);
+          }
+        }
+
+        return {
+          ...issue,
+          reportedBy:
+            loggedInUserId && issue.userId === loggedInUserId ? 'me' : 'others',
+          address,
+        };
+      })
+    );
 
     res.status(200).json({
       success: true,

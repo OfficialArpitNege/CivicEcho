@@ -28,8 +28,28 @@ export const complaintService = {
   /**
    * Update complaint status
    */
-  updateComplaintStatus: async (id, status) => {
-    const response = await apiClient.patch(`/complaints/${id}/status`, { status });
+  updateComplaintStatus: async (id, status, resolutionNote = null) => {
+    const payload = { status };
+    if (resolutionNote) {
+      payload.resolutionNote = resolutionNote;
+    }
+    const response = await apiClient.put(`/complaints/${id}/status`, payload);
+    return response.data;
+  },
+
+  /**
+   * Update complaint content (description)
+   */
+  updateComplaint: async (id, updates) => {
+    const response = await apiClient.patch(`/complaints/${id}`, updates);
+    return response.data;
+  },
+
+  /**
+   * Delete complaint
+   */
+  deleteComplaint: async (id) => {
+    const response = await apiClient.delete(`/complaints/${id}`);
     return response.data;
   },
 
@@ -38,6 +58,17 @@ export const complaintService = {
    */
   upvoteComplaint: async (id, userId) => {
     const response = await apiClient.post(`/complaints/${id}/upvote`, { userId });
+    return response.data;
+  },
+
+  /**
+   * Assign complaint to resolver (authority only)
+   */
+  assignComplaint: async (id, assignedTo, resolverName) => {
+    const response = await apiClient.post(`/complaints/${id}/assign`, {
+      assignedTo,
+      resolverName,
+    });
     return response.data;
   },
 };

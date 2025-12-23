@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 export const useGeolocation = () => {
   const [location, setLocation] = useState(null);
@@ -61,21 +61,22 @@ export const useVoiceRecording = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null);
   const [error, setError] = useState(null);
-  let mediaRecorder;
-  let audioChunks = [];
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(stream);
-      audioChunks = [];
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
 
       mediaRecorder.ondataavailable = (event) => {
-        audioChunks.push(event.data);
+        audioChunksRef.current.push(event.data);
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(audioChunks, { type: 'audio/wav' });
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
         setAudioBlob(blob);
       };
 
@@ -88,6 +89,7 @@ export const useVoiceRecording = () => {
   }, []);
 
   const stopRecording = useCallback(() => {
+    const mediaRecorder = mediaRecorderRef.current;
     if (mediaRecorder && isRecording) {
       mediaRecorder.stop();
       setIsRecording(false);

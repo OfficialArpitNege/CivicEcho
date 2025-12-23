@@ -64,7 +64,10 @@ const findOrCreateCluster = async (complaint) => {
       );
 
       const isNearby = distance <= CLUSTERING.DISTANCE_THRESHOLD_KM;
-      const isRecent = existingComplaint.createdAt?.toMillis() > timeThreshold;
+      const createdAt = existingComplaint.createdAt instanceof Date
+        ? existingComplaint.createdAt.getTime()
+        : existingComplaint.createdAt?.toMillis?.();
+      const isRecent = createdAt > timeThreshold;
 
       // Check text similarity
       const similarity = calculateTextSimilarity(description, existingComplaint.description);
@@ -153,16 +156,59 @@ const getAllComplaints = async (filters = {}) => {
 /**
  * Update complaint status
  */
-const updateComplaintStatus = async (complaintId, status) => {
+const updateComplaintStatus = async (complaintId, status, authorityId = null, resolutionNote = null) => {
+  try {
+    const updateData = {
+      status,
+      updatedAt: new Date(),
+    };
+
+    // Add audit trail
+    if (authorityId) {
+      updateData.updatedBy = authorityId;
+    }
+
+    // Add resolution note if resolving
+    if (resolutionNote && status === 'resolved') {
+      updateData.resolutionNote = resolutionNote;
+      updateData.resolvedAt = new Date();
+    }
+
+    await db.collection('complaints').doc(complaintId).update(updateData);
+
+    return await getComplaintById(complaintId);
+  } catch (error) {
+    console.error('Error updating complaint status:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update complaint content (e.g., description)
+ */
+const updateComplaint = async (complaintId, updates) => {
   try {
     await db.collection('complaints').doc(complaintId).update({
-      status,
+      ...updates,
       updatedAt: new Date(),
     });
 
     return await getComplaintById(complaintId);
   } catch (error) {
-    console.error('Error updating complaint status:', error);
+    console.error('Error updating complaint:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete complaint
+ */
+const deleteComplaint = async (complaintId) => {
+  try {
+    await db.collection('complaints').doc(complaintId).delete();
+    return { id: complaintId };
+  } catch (error) {
+    console.error('Error deleting complaint:', error);
     throw error;
   }
 };
@@ -207,11 +253,33 @@ const upvoteComplaint = async (complaintId, userId) => {
   }
 };
 
+/**
+ * Assign complaint to resolver
+ */
+const assignComplaint = async (complaintId, assignedTo, resolverName) => {
+  try {
+    await db.collection('complaints').doc(complaintId).update({
+      assignedTo,
+      resolverName,
+      status: 'in_progress',
+      updatedAt: new Date(),
+    });
+
+    return await getComplaintById(complaintId);
+  } catch (error) {
+    console.error('Error assigning complaint:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   createComplaint,
   getComplaintById,
   getAllComplaints,
   updateComplaintStatus,
+  updateComplaint,
+  deleteComplaint,
   upvoteComplaint,
+  assignComplaint,
   findOrCreateCluster,
 };

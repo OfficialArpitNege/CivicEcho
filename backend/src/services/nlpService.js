@@ -15,12 +15,9 @@ const analyzeComplaint = async (text) => {
       const severity = determineSeverityFromText(text);
 
       return {
-        category,
-        severity,
-        sentiment: {
-          score: 0,
-          magnitude: 0,
-        },
+        category: category || 'other',
+        severity: severity || 'low',
+        sentiment: { score: 0, magnitude: 0 },
         entities: [],
         mock: true,
       };

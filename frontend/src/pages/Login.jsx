@@ -48,6 +48,22 @@ export default function Login() {
         <h1 className="text-3xl font-bold text-center text-gray-800 mb-2">CivicEcho</h1>
         <p className="text-center text-gray-600 mb-8">Community Issue Reporting</p>
 
+        {/* Test Credentials Info */}
+        <div className="bg-blue-50 border-l-4 border-blue-600 p-4 mb-6 text-sm">
+          <p className="font-semibold text-blue-900 mb-2">📋 Test Credentials:</p>
+          <div className="space-y-2 text-blue-800">
+            <div>
+              <p className="font-medium">Authority User:</p>
+              <p className="text-xs font-mono">authority@civicecho.gov</p>
+              <p className="text-xs font-mono">Authority123!</p>
+            </div>
+            <div>
+              <p className="font-medium mt-2">Citizen User:</p>
+              <p className="text-xs">Create any email/password</p>
+            </div>
+          </div>
+        </div>
+
         {error && (
           <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-6 text-sm">
             {error}

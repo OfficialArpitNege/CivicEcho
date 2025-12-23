@@ -1,4 +1,4 @@
-const { auth } = require('../config/firebase');
+const { auth, db } = require('../config/firebase');
 
 // Middleware to verify Firebase ID token
 const verifyToken = async (req, res, next) => {
@@ -11,6 +11,15 @@ const verifyToken = async (req, res, next) => {
   try {
     const decodedToken = await auth.verifyIdToken(token);
     req.user = decodedToken;
+    
+    // Fetch user role from Firestore
+    const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+    if (userDoc.exists) {
+      req.user.role = userDoc.data().role || 'citizen';
+    } else {
+      req.user.role = 'citizen';
+    }
+    
     next();
   } catch (error) {
     console.error('Token verification failed:', error);
@@ -18,4 +27,12 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-module.exports = { verifyToken };
+// Middleware to check if user is authority
+const requireAuthority = async (req, res, next) => {
+  if (req.user?.role !== 'authority') {
+    return res.status(403).json({ error: 'Access denied. Authority role required.' });
+  }
+  next();
+};
+
+module.exports = { verifyToken, requireAuthority };
