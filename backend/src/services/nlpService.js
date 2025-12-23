@@ -33,8 +33,8 @@ const analyzeComplaint = async (text) => {
     const [entityResponse] = await languageClient.analyzeEntities({ document });
     const [sentimentResponse] = await languageClient.analyzeSentiment({ document });
 
-    // Determine category based on keywords
-    const category = determineCategoryFromText(text);
+    // Determine category based on keywords and entities
+    const category = determineCategoryFromText(text, entityResponse.entities);
 
     // Determine severity based on sentiment and entities
     const severity = determineSeverityFromSentiment(sentimentResponse, text);
@@ -64,19 +64,42 @@ const analyzeComplaint = async (text) => {
 /**
  * Determine issue category based on keywords
  */
-const determineCategoryFromText = (text) => {
+/**
+ * Determine issue category based on keywords and NLP entities
+ */
+const determineCategoryFromText = (text, entities = []) => {
   const lowerText = text.toLowerCase();
 
+  // Extract entity names if available
+  const entityNames = entities.map(e => e.name.toLowerCase());
+  const combinedText = [lowerText, ...entityNames].join(' ');
+
   const categoryKeywords = {
-    [ISSUE_CATEGORIES.WATER]: ['water', 'leak', 'burst', 'pipe', 'flooding', 'wet'],
-    [ISSUE_CATEGORIES.GARBAGE]: ['garbage', 'waste', 'trash', 'litter', 'dump', 'dirty'],
-    [ISSUE_CATEGORIES.ROAD]: ['road', 'pothole', 'crack', 'asphalt', 'pavement', 'damaged'],
-    [ISSUE_CATEGORIES.POWER]: ['power', 'electricity', 'outage', 'blackout', 'light', 'electric'],
-    [ISSUE_CATEGORIES.SAFETY]: ['safety', 'dangerous', 'hazard', 'broken', 'accident', 'risk'],
+    [ISSUE_CATEGORIES.WATER]: [
+      'water', 'leak', 'burst', 'pipe', 'flooding', 'wet', 'drainage', 'sewage',
+      'tap', 'supply', 'drinking', 'muddy', 'puddle', 'overflow', 'plumbing'
+    ],
+    [ISSUE_CATEGORIES.GARBAGE]: [
+      'garbage', 'waste', 'trash', 'litter', 'dump', 'dirty', 'dustbin', 'refuse',
+      'rubbish', 'cleaning', 'smell', 'odor', 'stink', 'sanitation', 'debris'
+    ],
+    [ISSUE_CATEGORIES.ROAD]: [
+      'road', 'pothole', 'crack', 'asphalt', 'pavement', 'damaged', 'street',
+      'traffic', 'signal', 'sign', 'lane', 'bump', 'surface', 'footpath', 'sidewalk'
+    ],
+    [ISSUE_CATEGORIES.POWER]: [
+      'power', 'electricity', 'outage', 'blackout', 'light', 'electric', 'voltage',
+      'wire', 'cable', 'pole', 'transformer', 'switch', 'current', 'spark', 'dark'
+    ],
+    [ISSUE_CATEGORIES.SAFETY]: [
+      'safety', 'dangerous', 'hazard', 'broken', 'accident', 'risk', 'threat',
+      'fire', 'smoke', 'suspicious', 'crime', 'theft', 'assault', 'unsafe', 'security'
+    ],
   };
 
+  // Check keywords against combined text (original text + entity names)
   for (const [category, keywords] of Object.entries(categoryKeywords)) {
-    if (keywords.some((keyword) => lowerText.includes(keyword))) {
+    if (keywords.some((keyword) => combinedText.includes(keyword))) {
       return category;
     }
   }
@@ -89,7 +112,7 @@ const determineCategoryFromText = (text) => {
  */
 const determineSeverityFromText = (text) => {
   const lowerText = text.toLowerCase();
-  
+
   const criticalKeywords = ['critical', 'urgent', 'emergency', 'asap', 'immediately', 'dangerous', 'severe', 'injury'];
   const highKeywords = ['serious', 'major', 'significant', 'needs repair', 'broken'];
   const mediumKeywords = ['issue', 'problem', 'needs', 'should be'];
