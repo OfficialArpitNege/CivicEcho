@@ -282,4 +282,53 @@ module.exports = {
   upvoteComplaint,
   assignComplaint,
   findOrCreateCluster,
+  reverseGeocode,
 };
+
+/**
+ * Reverse geocode coordinates to get address
+ * Uses OpenStreetMap Nominatim API (free, no key required)
+ */
+async function reverseGeocode(latitude, longitude) {
+  try {
+    const response = await require('axios').get('https://nominatim.openstreetmap.org/reverse', {
+      params: {
+        lat: latitude,
+        lon: longitude,
+        format: 'json',
+        zoom: 18,
+        addressdetails: 1,
+      },
+      timeout: 5000,
+      headers: {
+        'User-Agent': 'CivicEcho-App/1.0',
+      },
+    });
+
+    if (response.data && response.data.address) {
+      // Build a readable address from the components
+      const addr = response.data.address;
+      const addressParts = [];
+      
+      if (addr.road || addr.pedestrian || addr.footway) {
+        addressParts.push(addr.road || addr.pedestrian || addr.footway);
+      }
+      if (addr.neighbourhood || addr.suburb) {
+        addressParts.push(addr.neighbourhood || addr.suburb);
+      }
+      if (addr.city || addr.town || addr.village) {
+        addressParts.push(addr.city || addr.town || addr.village);
+      }
+      if (addr.country) {
+        addressParts.push(addr.country);
+      }
+
+      return addressParts.join(', ') || response.data.display_name;
+    }
+    
+    return response.data?.display_name || null;
+  } catch (error) {
+    console.error('Error reverse geocoding:', error.message);
+    return null;
+  }
+}

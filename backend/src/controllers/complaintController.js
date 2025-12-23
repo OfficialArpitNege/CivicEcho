@@ -7,6 +7,7 @@ const {
   deleteComplaint,
   upvoteComplaint,
   assignComplaint,
+  reverseGeocode,
 } = require('../services/complaintService');
 const { isValidCoordinates } = require('../utils/helpers');
 const axios = require('axios');
@@ -30,10 +31,21 @@ const handleCreateComplaint = async (req, res) => {
       return res.status(400).json({ error: 'Invalid coordinates' });
     }
 
+    // Try to reverse geocode the coordinates to get address
+    let address = null;
+    try {
+      address = await reverseGeocode(latitude, longitude);
+      console.log(`📍 Geocoded address: ${address}`);
+    } catch (error) {
+      console.warn(`⚠️ Could not reverse geocode coordinates: ${error.message}`);
+      // Continue without address - it's not critical
+    }
+
     const complaintData = {
       description,
       latitude,
       longitude,
+      address: address || null,
       complaintType: complaintType || 'text',
       audioUrl,
       imageBase64: imageBase64 || null,
