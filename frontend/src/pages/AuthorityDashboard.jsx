@@ -232,11 +232,11 @@ export default function AuthorityDashboard() {
                         <td className="px-6 py-4">
                           <div className="flex items-center text-sm text-gray-600 max-w-xs">
                             <FiMapPin className="mr-2 flex-shrink-0" />
-                            <span title={issue.location?.address || 'Location'}>
+                            <span title={issue.location?.address || `Lat: ${issue.location?.latitude}, Lon: ${issue.location?.longitude}`}>
                               {issue.location?.address ? (
                                 issue.location.address.substring(0, 25) + (issue.location.address.length > 25 ? '...' : '')
                               ) : (
-                                `${issue.location?.latitude?.toFixed(2)}, ${issue.location?.longitude?.toFixed(2)}`
+                                `${issue.location?.latitude?.toFixed(4)}, ${issue.location?.longitude?.toFixed(4)}`
                               )}
                             </span>
                           </div>
@@ -281,29 +281,44 @@ export default function AuthorityDashboard() {
                               </button>
                             )}
 
-                            {/* Assign Resolver */}
+                            {/* Assign/Edit Resolver */}
                             {!isResolved && (
-                              <div className="flex gap-2">
-                                <input
-                                  type="text"
-                                  placeholder="Officer/Dept name"
-                                  value={editingResolver[issue.issueId] || ''}
-                                  onChange={(e) => setEditingResolver(prev => ({
-                                    ...prev,
-                                    [issue.issueId]: e.target.value
-                                  }))}
-                                  disabled={actionLoading[issue.issueId]}
-                                  className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:bg-gray-100"
-                                />
-                                <button
-                                  onClick={() => handleAssignResolver(issue.issueId)}
-                                  disabled={actionLoading[issue.issueId] === 'assign'}
-                                  className="px-3 py-2 bg-indigo-600 text-white rounded text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:bg-gray-400 transition"
-                                  title="Assign this officer/department to handle the issue"
-                                >
-                                  {actionLoading[issue.issueId] === 'assign' ? '...' : '✓'}
-                                </button>
-                              </div>
+                              <>
+                                {!issue.assignedResolver ? (
+                                  <div className="flex gap-2">
+                                    <input
+                                      type="text"
+                                      placeholder="Officer/Dept name"
+                                      value={editingResolver[issue.issueId] || ''}
+                                      onChange={(e) => setEditingResolver(prev => ({
+                                        ...prev,
+                                        [issue.issueId]: e.target.value
+                                      }))}
+                                      disabled={actionLoading[issue.issueId]}
+                                      className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:bg-gray-100"
+                                    />
+                                    <button
+                                      onClick={() => handleAssignResolver(issue.issueId)}
+                                      disabled={actionLoading[issue.issueId] === 'assign'}
+                                      className="px-3 py-2 bg-indigo-600 text-white rounded text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:bg-gray-400 transition"
+                                      title="Assign this officer/department to handle the issue"
+                                    >
+                                      {actionLoading[issue.issueId] === 'assign' ? '...' : '✓'}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => setEditingResolver(prev => ({
+                                      ...prev,
+                                      [issue.issueId]: issue.assignedResolver
+                                    }))}
+                                    className="w-full px-3 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition"
+                                    title="Edit the assigned resolver"
+                                  >
+                                    ✏️ Edit Resolver: {issue.assignedResolver}
+                                  </button>
+                                )}
+                              </>
                             )}
 
                             {/* Change Status */}
