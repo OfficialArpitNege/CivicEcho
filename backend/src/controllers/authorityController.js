@@ -32,6 +32,10 @@ const getAllIssues = async (req, res) => {
           address: complaint.address || 'Unknown',
         },
         assignedResolver: complaint.assignedResolver || null,
+        // include base64 image (if any) so authority UI can show attachments
+        imageBase64: complaint.imageBase64 || null,
+        // legacy support: include imageUrl if stored separately
+        imageUrl: complaint.imageUrl || null,
         severity: complaint.severity || 'MEDIUM',
         createdAt: complaint.createdAt?.toDate?.() || new Date(),
       });
