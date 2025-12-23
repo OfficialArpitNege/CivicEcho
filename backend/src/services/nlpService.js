@@ -46,8 +46,18 @@ const analyzeComplaint = async (text) => {
       entities: entityResponse.entities,
     };
   } catch (error) {
-    console.error('Error analyzing complaint:', error);
-    throw new Error('NLP analysis failed');
+    console.error('⚠️ Error analyzing complaint with NLP, using fallback:', error.message);
+    // Use text-based analysis as fallback
+    const category = determineCategoryFromText(text);
+    const severity = determineSeverityFromText(text);
+
+    return {
+      category: category || 'other',
+      severity: severity || 'medium',
+      sentiment: { score: 0, magnitude: 0 },
+      entities: [],
+      fallback: true,
+    };
   }
 };
 
