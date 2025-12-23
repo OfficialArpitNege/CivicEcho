@@ -1,6 +1,7 @@
 /**
  * Script to create hardcoded authority user in Firebase Emulator
- * Run with: node src/scripts/setupAuthority.js
+ * Can be run as: node src/scripts/setupAuthority.js
+ * Or imported and called from other modules
  */
 
 const { getAuth } = require('firebase-admin/auth');
@@ -8,9 +9,8 @@ const { db } = require('../config/firebase');
 
 const AUTHORITY_EMAIL = 'authority@civicecho.gov';
 const AUTHORITY_PASSWORD = 'Authority123!';
-const AUTHORITY_UID = 'authority-user-001';
 
-async function setupAuthority() {
+async function setupAuthorityUser() {
   try {
     console.log('🔐 Setting up hardcoded authority user...');
 
@@ -20,7 +20,7 @@ async function setupAuthority() {
     let user;
     try {
       user = await auth.getUserByEmail(AUTHORITY_EMAIL);
-      console.log(`✅ User already exists: ${AUTHORITY_EMAIL}`);
+      console.log(`✅ Authority user already exists: ${AUTHORITY_EMAIL}`);
     } catch (error) {
       if (error.code === 'auth/user-not-found') {
         // Create new authority user
@@ -48,22 +48,33 @@ async function setupAuthority() {
     };
 
     await db.collection('users').doc(user.uid).set(userProfile, { merge: true });
-    console.log(`✅ Updated Firestore profile with authority role`);
+    console.log(`✅ Authority user is ready to login`);
 
-    console.log('\n📋 Authority User Setup Complete!');
-    console.log('─'.repeat(50));
-    console.log(`Email: ${AUTHORITY_EMAIL}`);
-    console.log(`Password: ${AUTHORITY_PASSWORD}`);
-    console.log(`UID: ${user.uid}`);
-    console.log(`Role: authority`);
-    console.log('─'.repeat(50));
-    console.log('\nYou can now login with these credentials in the app.');
-
-    process.exit(0);
+    return user;
   } catch (error) {
-    console.error('❌ Error setting up authority user:', error);
-    process.exit(1);
+    console.error('❌ Error setting up authority user:', error.message);
+    throw error;
   }
 }
 
-setupAuthority();
+// If run directly as a script
+if (require.main === module) {
+  setupAuthorityUser()
+    .then((user) => {
+      console.log('\n📋 Authority User Setup Complete!');
+      console.log('─'.repeat(50));
+      console.log(`Email: ${AUTHORITY_EMAIL}`);
+      console.log(`Password: ${AUTHORITY_PASSWORD}`);
+      console.log(`UID: ${user.uid}`);
+      console.log(`Role: authority`);
+      console.log('─'.repeat(50));
+      console.log('\nYou can now login with these credentials in the app.');
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error('❌ Setup failed:', error.message);
+      process.exit(1);
+    });
+}
+
+module.exports = { setupAuthorityUser };

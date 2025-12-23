@@ -17,6 +17,9 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const userRoutes = require('./routes/userRoutes');
 const authorityRoutes = require('./routes/authorityRoutes');
 
+// Import setup function
+const { setupAuthorityUser } = require('./scripts/setupAuthority');
+
 const app = express();
 
 // Middleware
@@ -57,9 +60,17 @@ app.use((err, req, res, next) => {
 
 // Start Server
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, async () => {
   console.log(`🚀 CivicEcho Backend running on http://localhost:${PORT}`);
   console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
+  
+  // Setup authority user on startup
+  try {
+    await setupAuthorityUser();
+  } catch (error) {
+    console.error('⚠️ Warning: Could not setup authority user:', error.message);
+    // Don't crash - continue running even if setup fails
+  }
 });
 
 module.exports = app;
