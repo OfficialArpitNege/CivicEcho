@@ -2,6 +2,7 @@ const { db } = require('../config/firebase');
 const { analyzeComplaint, calculateTextSimilarity } = require('./nlpService');
 const { calculateDistance } = require('../utils/helpers');
 const { CLUSTERING } = require('../utils/constants');
+const { awardPoints, POINTS } = require('./userService');
 const axios = require('axios');
 
 /**
@@ -177,6 +178,19 @@ const updateComplaintStatus = async (complaintId, status, authorityId = null, re
 
     await db.collection('complaints').doc(complaintId).update(updateData);
 
+
+
+    // Award points if verified (status changed to in_progress)
+    // We fetch the complaint first to get the userId
+    if (status === 'in_progress') {
+      const complaint = await getComplaintById(complaintId);
+      if (complaint.userId) {
+        // Run asynchronously, don't block response
+        awardPoints(complaint.userId, POINTS.COMPLAINT_VERIFIED, 'Complaint Verified')
+          .catch(err => console.error('Failed to award points:', err));
+      }
+    }
+
     return await getComplaintById(complaintId);
   } catch (error) {
     console.error('Error updating complaint status:', error);
@@ -310,7 +324,7 @@ async function reverseGeocode(latitude, longitude) {
       // Build a readable address from the components
       const addr = response.data.address;
       const addressParts = [];
-      
+
       if (addr.road || addr.pedestrian || addr.footway) {
         addressParts.push(addr.road || addr.pedestrian || addr.footway);
       }
@@ -326,7 +340,7 @@ async function reverseGeocode(latitude, longitude) {
 
       return addressParts.join(', ') || response.data.display_name;
     }
-    
+
     return response.data?.display_name || null;
   } catch (error) {
     console.error('Error reverse geocoding:', error.message);

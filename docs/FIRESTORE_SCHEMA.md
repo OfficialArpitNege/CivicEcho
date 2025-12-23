@@ -145,6 +145,8 @@ Extends Firebase Auth with custom user data.
   lastLoginAt: Timestamp,
   isActive: Boolean
 }
+
+
 ```
 
 ---

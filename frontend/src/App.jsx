@@ -13,20 +13,21 @@ import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import AuthorityDashboard from './pages/AuthorityDashboard';
 import ReportComplaint from './pages/ReportComplaint';
+import Leaderboard from './pages/Leaderboard';
 
 // CSS
 import './index.css';
 
 function RoleBasedDashboard() {
   const { isAuthority, userRole, loading, user } = useAuth();
-  
+
   console.log(`🎯 RoleBasedDashboard - Email: ${user?.email}, Role: ${userRole}, isAuthority: ${isAuthority()}, Loading: ${loading}`);
-  
+
   if (isAuthority()) {
     console.log('📊 Rendering Authority Dashboard');
     return <AuthorityDashboard />;
   }
-  
+
   console.log('👥 Rendering Citizen Dashboard');
   return <Dashboard />;
 }
@@ -74,6 +75,15 @@ function App() {
               </ProtectedRoute>
             }
           />
+          {/* Leaderboard - Available to all logged/unlogged? Let's make it protected */}
+          <Route
+            path="/leaderboard"
+            element={
+              <ProtectedRoute>
+                <Leaderboard />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Catch All */}
           <Route path="*" element={<Navigate to="/" />} />
@@ -96,3 +106,4 @@ function App() {
 }
 
 export default App;
+console.log(import.meta.env.VITE_FIREBASE_PROJECT_ID);

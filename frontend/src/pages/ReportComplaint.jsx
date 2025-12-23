@@ -3,12 +3,28 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useGeolocation, useVoiceRecording } from '../hooks/useCustom';
 import { createComplaint } from '../services/firestoreComplaintService';
-import { FiMapPin, FiMic, FiSend, FiAlertCircle, FiCamera, FiX } from 'react-icons/fi';
+import { FiMapPin, FiMic, FiSend, FiAlertCircle, FiCamera, FiX, FiMap } from 'react-icons/fi';
 import { toast } from 'react-toastify';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Component to handle map clicks
+function LocationMarker({ position, setPosition }) {
+  useMapEvents({
+    click(e) {
+      setPosition(e.latlng);
+    },
+  });
+
+  return position === null ? null : (
+    <Marker position={position}></Marker>
+  );
+}
 
 export default function ReportComplaint() {
   const { user, userRole, loading: authLoading } = useAuth();
-  
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -28,8 +44,15 @@ export default function ReportComplaint() {
   const [loading, setLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [mapModalOpen, setMapModalOpen] = useState(false);
+  const [manualLocation, setManualLocation] = useState(null);
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+
+  // Use manual location if set, otherwise fallback to GPS
+  const activeLocation = manualLocation ?
+    { latitude: manualLocation.lat, longitude: manualLocation.lng } :
+    location;
 
   useEffect(() => {
     getCurrentLocation();
@@ -74,8 +97,8 @@ export default function ReportComplaint() {
       return;
     }
 
-    if (!location) {
-      toast.error('Please enable location access');
+    if (!activeLocation) {
+      toast.error('Please enable location or select it on the map');
       return;
     }
 
@@ -84,16 +107,18 @@ export default function ReportComplaint() {
     try {
       const complaintData = {
         description,
-        latitude: location.latitude,
-        longitude: location.longitude,
+        latitude: activeLocation.latitude,
+        longitude: activeLocation.longitude,
         complaintType,
         imageBase64: imagePreview || null,
+        address: manualLocation ? 'Manual Selection' : 'GPS Location'
       };
 
       await createComplaint(user.uid, user.email, complaintData);
       toast.success('✅ Complaint submitted successfully!');
       setDescription('');
       setComplaintType('text');
+      setManualLocation(null);
       removeImage();
     } catch (error) {
       toast.error('❌ Failed to submit complaint: ' + error.message);
@@ -150,8 +175,29 @@ export default function ReportComplaint() {
                 >
                   Update Location
                 </button>
+                <div className="text-xs text-gray-500 mt-1">
+                  {manualLocation ? '(Manually Selected)' : '(GPS Detected)'}
+                </div>
               </div>
+
+              <button
+                type="button"
+                onClick={() => setMapModalOpen(true)}
+                className="ml-auto flex items-center gap-2 px-3 py-2 bg-white text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition text-sm font-medium shadow-sm"
+              >
+                <FiMap /> Select on Map
+              </button>
             </div>
+          )}
+
+          {!location && !manualLocation && (
+            <button
+              type="button"
+              onClick={() => setMapModalOpen(true)}
+              className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-500 flex items-center justify-center gap-2 transition"
+            >
+              <FiMap /> Click to select location on map
+            </button>
           )}
 
           {/* Type Selection */}
@@ -295,6 +341,71 @@ export default function ReportComplaint() {
           </button>
         </form>
       </div>
-    </div>
+
+
+      {/* Map Selection Modal */}
+      {
+        mapModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col">
+              <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 className="text-lg font-bold text-gray-800">Pinpoint Location</h3>
+                <button
+                  onClick={() => setMapModalOpen(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <FiX size={24} />
+                </button>
+              </div>
+
+              <div className="flex-1 relative">
+                <MapContainer
+                  center={
+                    location
+                      ? [location.latitude, location.longitude]
+                      : [28.6139, 77.2090] // Default (New Delhi)
+                  }
+                  zoom={15}
+                  style={{ height: '100%', width: '100%' }}
+                >
+                  <TileLayer
+                    attribution='&copy; OpenStreetMap contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  <LocationMarker
+                    position={manualLocation || (location ? { lat: location.latitude, lng: location.longitude } : null)}
+                    setPosition={setManualLocation}
+                  />
+                </MapContainer>
+
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white px-4 py-2 rounded-full shadow-lg text-sm font-semibold z-[400]">
+                  Tap anywhere to move marker
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
+                <button
+                  onClick={() => setMapModalOpen(false)}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (!manualLocation && location) {
+                      setManualLocation({ lat: location.latitude, lng: location.longitude });
+                    }
+                    setMapModalOpen(false);
+                  }}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                >
+                  Confirm Location
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+    </div >
   );
 }

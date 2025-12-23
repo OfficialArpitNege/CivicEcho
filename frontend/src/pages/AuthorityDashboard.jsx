@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { 
-  getAllComplaints, 
-  updateComplaintStatus, 
-  assignResolver 
+import {
+  getAllComplaints,
+  updateComplaintStatus,
+  assignResolver,
+  deleteComplaint
 } from '../services/firestoreComplaintService';
 import { FiMapPin, FiUser, FiX } from 'react-icons/fi';
 import { toast } from 'react-toastify';
@@ -57,8 +58,12 @@ export default function AuthorityDashboard() {
   const handleStatusChange = async (issueId, newStatus) => {
     try {
       setActionLoading(prev => ({ ...prev, [issueId]: 'status' }));
-      await updateComplaintStatus(issueId, newStatus);
+      const result = await updateComplaintStatus(issueId, newStatus);
       toast.success(`✅ Status updated to ${newStatus}`);
+
+      if (result.pointsAwarded) {
+        toast.success(`🏆 +${result.pointsEarned} points awarded to citizen!`);
+      }
       await loadAllIssues();
     } catch (error) {
       console.error('Error updating status:', error);
@@ -71,7 +76,7 @@ export default function AuthorityDashboard() {
   // Update resolver
   const handleAssignResolver = async (issueId) => {
     const resolverName = editingResolver[issueId] || '';
-    
+
     if (!resolverName.trim()) {
       toast.warning('Please enter resolver name');
       return;
@@ -86,6 +91,24 @@ export default function AuthorityDashboard() {
     } catch (error) {
       console.error('Error assigning resolver:', error);
       toast.error('Failed to assign resolver');
+    } finally {
+      setActionLoading(prev => ({ ...prev, [issueId]: null }));
+    }
+  };
+
+  // Delete complaint
+  const handleDeleteComplaint = async (issueId) => {
+    const confirmed = window.confirm('Are you sure you want to delete this complaint? This action cannot be undone.');
+    if (!confirmed) return;
+
+    try {
+      setActionLoading(prev => ({ ...prev, [issueId]: 'delete' }));
+      await deleteComplaint(issueId);
+      toast.success('✅ Complaint deleted successfully');
+      await loadAllIssues();
+    } catch (error) {
+      console.error('Error deleting complaint:', error);
+      toast.error('Failed to delete complaint');
     } finally {
       setActionLoading(prev => ({ ...prev, [issueId]: null }));
     }
@@ -212,11 +235,10 @@ export default function AuthorityDashboard() {
               <button
                 key={key}
                 onClick={() => setFilter(key)}
-                className={`px-4 py-2 rounded-lg font-medium transition ${
-                  filter === key
-                    ? 'bg-indigo-600 text-white shadow-lg'
-                    : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
-                }`}
+                className={`px-4 py-2 rounded-lg font-medium transition ${filter === key
+                  ? 'bg-indigo-600 text-white shadow-lg'
+                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                  }`}
               >
                 {icon} {label}
               </button>
@@ -268,7 +290,7 @@ export default function AuthorityDashboard() {
                   {issues.map(issue => {
                     const statusBadge = getStatusBadge(issue.status);
                     const isResolved = issue.status === 'resolved';
-                    
+
                     return (
                       <tr key={issue.issueId} className="hover:bg-gray-50">
                         <td className="px-6 py-4">
@@ -404,6 +426,16 @@ export default function AuthorityDashboard() {
                                 ✓ Resolved
                               </div>
                             )}
+
+                            {/* Delete Button */}
+                            <button
+                              onClick={() => handleDeleteComplaint(issue.issueId)}
+                              disabled={actionLoading[issue.issueId]}
+                              className="w-full px-3 py-2 mt-2 bg-red-100 text-red-700 rounded text-sm font-medium hover:bg-red-200 transition flex items-center justify-center gap-2"
+                              title="Delete this complaint"
+                            >
+                              {actionLoading[issue.issueId] === 'delete' ? '⏳ Deleting...' : '🗑️ Delete'}
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -507,7 +539,7 @@ export default function AuthorityDashboard() {
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 }
 

@@ -2,6 +2,7 @@ const express = require('express');
 const {
   handleCreateUserProfile,
   handleGetUserProfile,
+  handleGetLeaderboard,
 } = require('../controllers/userController');
 
 const router = express.Router();
@@ -11,6 +12,11 @@ const router = express.Router();
  * Body: { uid, email, role }
  */
 router.post('/profile', handleCreateUserProfile);
+
+/**
+ * GET /api/users/leaderboard - Get leaderboard
+ */
+router.get('/leaderboard', handleGetLeaderboard);
 
 /**
  * GET /api/users/profile/:uid - Get user profile

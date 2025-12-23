@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { 
-  getDashboardStats, 
-  getPriorityIssues, 
-  updateComplaint, 
-  deleteComplaint, 
-  upvoteComplaint 
+import {
+  getDashboardStats,
+  getPriorityIssues,
+  updateComplaint,
+  deleteComplaint,
+  upvoteComplaint
 } from '../services/firestoreComplaintService';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { FiTrendingUp, FiAlertTriangle, FiCheckCircle, FiClock } from 'react-icons/fi';
@@ -254,9 +254,9 @@ export default function Dashboard() {
                       <p className="text-xs text-gray-500 mt-2">
                         📍 {issue.address || `${issue.latitude.toFixed(4)}, ${issue.longitude.toFixed(4)}`}
                       </p>
-                      {issue.reportedBy && (
+                      {user && (
                         <p className="text-xs text-gray-500 mt-1">
-                          {issue.reportedBy === 'me' ? 'Reported by me' : 'Reported by others'}
+                          {user.uid === issue.userId ? 'Reported by me' : 'Reported by others'}
                         </p>
                       )}
                       {issue.resolverName && (
@@ -273,13 +273,12 @@ export default function Dashboard() {
                       </span>
                       <div className="mt-1">
                         <span
-                          className={`badge ${
-                            issue.severity === 'critical'
-                              ? 'badge-danger'
-                              : issue.severity === 'high'
+                          className={`badge ${issue.severity === 'critical'
+                            ? 'badge-danger'
+                            : issue.severity === 'high'
                               ? 'bg-orange-100 text-orange-800'
                               : 'badge-warning'
-                          }`}
+                            }`}
                         >
                           {issue.severity}
                         </span>
@@ -292,21 +291,23 @@ export default function Dashboard() {
                         ⬆️ {issue.upvotes} upvotes
                       </button>
 
-                      {issue.reportedBy === 'me' && (
-                        <div className="mt-3 space-x-2">
+                      {user && issue.userId === user.uid && (
+                        <div className="mt-3 flex justify-end gap-2">
                           <button
                             type="button"
                             onClick={() => handleEditComplaint(issue)}
-                            className="btn-secondary text-xs"
+                            className="flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-medium hover:bg-blue-200 transition"
+                            title="Edit Description"
                           >
-                            Edit
+                            ✏️ Edit
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteComplaint(issue)}
-                            className="btn-primary text-xs"
+                            className="flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs font-medium hover:bg-red-200 transition"
+                            title="Delete Complaint"
                           >
-                            Delete
+                            🗑️ Delete
                           </button>
                         </div>
                       )}

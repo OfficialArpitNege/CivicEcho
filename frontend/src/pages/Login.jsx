@@ -22,7 +22,7 @@ export default function Login() {
     } catch (err) {
       // Extract user-friendly error message
       let errorMsg = 'Login failed. Please try again.';
-      
+
       if (err.message) {
         if (err.message.includes('user-not-found')) {
           errorMsg = 'No account found with this email. Please sign up first.';
@@ -34,7 +34,7 @@ export default function Login() {
           errorMsg = err.message.replace('Firebase: Error (', '').replace(').', '');
         }
       }
-      
+
       setError(errorMsg);
       console.error('Login error:', err);
     } finally {

@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FiHome, FiAlertCircle, FiLogOut, FiMenu, FiX } from 'react-icons/fi';
+import { FiHome, FiAlertCircle, FiLogOut, FiMenu, FiX, FiAward } from 'react-icons/fi';
 import { useState } from 'react';
 
 export default function Navbar() {
@@ -45,6 +45,13 @@ export default function Navbar() {
                 Report Issue
               </Link>
             )}
+            <Link
+              to="/leaderboard"
+              className="flex items-center gap-1 text-gray-700 hover:text-blue-600 transition"
+            >
+              <FiAward />
+              Leaderboard
+            </Link>
             <div className="flex items-center gap-3 pl-6 border-l border-gray-200">
               <span className="text-sm text-gray-600">{user.email}</span>
               {userRole === 'authority' && (
@@ -88,6 +95,13 @@ export default function Navbar() {
                 Report Issue
               </Link>
             )}
+            <Link
+              to="/leaderboard"
+              className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Leaderboard
+            </Link>
             <button
               onClick={handleLogout}
               className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded"

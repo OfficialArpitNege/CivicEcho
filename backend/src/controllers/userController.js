@@ -1,4 +1,5 @@
 const { db } = require('../config/firebase');
+const userService = require('../services/userService');
 
 // Authority email whitelist (comma-separated in env, or empty array)
 const AUTHORITY_EMAIL_WHITELIST = process.env.AUTHORITY_EMAIL_WHITELIST
@@ -10,11 +11,11 @@ const AUTHORITY_EMAIL_WHITELIST = process.env.AUTHORITY_EMAIL_WHITELIST
  */
 const determineUserRole = (email) => {
   const normalizedEmail = email.toLowerCase().trim();
-  
+
   if (AUTHORITY_EMAIL_WHITELIST.includes(normalizedEmail)) {
     return 'authority';
   }
-  
+
   return 'citizen';
 };
 
@@ -33,9 +34,9 @@ const handleCreateUserProfile = async (req, res) => {
 
     // Check if user already exists
     const existingUser = await db.collection('users').doc(uid).get();
-    
+
     let role = 'citizen';
-    
+
     if (existingUser.exists) {
       // Preserve existing role (prevent downgrade)
       role = existingUser.data().role || 'citizen';
@@ -97,8 +98,28 @@ const handleGetUserProfile = async (req, res) => {
   }
 };
 
+/**
+ * Get leaderboard
+ * GET /api/users/leaderboard
+ */
+const handleGetLeaderboard = async (req, res) => {
+  try {
+    const { limit } = req.query;
+    const leaderboard = await userService.getLeaderboard(limit ? parseInt(limit) : 10);
+
+    res.status(200).json({
+      success: true,
+      data: leaderboard
+    });
+  } catch (error) {
+    console.error('Error fetching leaderboard:', error);
+    res.status(500).json({ error: 'Failed to fetch leaderboard' });
+  }
+};
+
 module.exports = {
   handleCreateUserProfile,
   handleGetUserProfile,
+  handleGetLeaderboard,
 };
 
