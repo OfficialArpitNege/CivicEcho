@@ -17,7 +17,7 @@ const axios = require('axios');
  */
 const handleCreateComplaint = async (req, res) => {
   try {
-    const { description, latitude, longitude, complaintType, audioUrl, userId } = req.body;
+    const { description, latitude, longitude, complaintType, audioUrl, userId, imageBase64 } = req.body;
 
     // Validation
     if (!description || !latitude || !longitude || !userId) {
@@ -36,6 +36,7 @@ const handleCreateComplaint = async (req, res) => {
       longitude,
       complaintType: complaintType || 'text',
       audioUrl,
+      imageBase64: imageBase64 || null,
       userId,
       status: 'reported',
       upvotes: 0,

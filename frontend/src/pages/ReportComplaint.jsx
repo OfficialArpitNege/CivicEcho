@@ -89,16 +89,16 @@ export default function ReportComplaint() {
         complaintType,
         userId: user.uid,
         audioUrl: null,
-        imageUrl: null,
+        imageBase64: imagePreview || null,
       };
 
       const response = await complaintService.createComplaint(complaintData);
-      toast.success('Complaint submitted successfully!');
+      toast.success('✅ Complaint submitted successfully!');
       setDescription('');
       setComplaintType('text');
       removeImage();
     } catch (error) {
-      toast.error('Failed to submit complaint: ' + error.message);
+      toast.error('❌ Failed to submit complaint: ' + error.message);
     } finally {
       setLoading(false);
     }
