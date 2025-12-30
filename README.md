@@ -31,9 +31,7 @@ CivicEcho provides:
 - Firebase Authentication
 
 **Backend**
-- Node.js + Express
-- REST APIs
-- Firebase Cloud Messaging
+-Firebase
 
 **Database & Auth**
 - Firebase Authentication
