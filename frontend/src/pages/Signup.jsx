@@ -25,7 +25,7 @@ export default function Signup() {
 
     try {
       await signup(email, password);
-      navigate('/');
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       // Extract user-friendly error message
       let errorMsg = 'Signup failed. Please try again.';

@@ -54,9 +54,7 @@ export default function ReportComplaint() {
     { latitude: manualLocation.lat, longitude: manualLocation.lng } :
     location;
 
-  useEffect(() => {
-    getCurrentLocation();
-  }, [getCurrentLocation]);
+
 
   const handleImageSelect = (e) => {
     const file = e.target.files?.[0];
@@ -191,14 +189,24 @@ export default function ReportComplaint() {
           )}
 
           {!location && !manualLocation && (
-            <button
-              type="button"
-              onClick={() => setMapModalOpen(true)}
-              className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-500 flex items-center justify-center gap-2 transition"
-            >
-              <FiMap /> Click to select location on map
-            </button>
-          )}
+  <div className="space-y-4">
+    <button
+      type="button"
+      onClick={getCurrentLocation}
+      className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+    >
+      📍 Allow Location Access
+    </button>
+
+    <button
+      type="button"
+      onClick={() => setMapModalOpen(true)}
+      className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-500 flex items-center justify-center gap-2 transition"
+    >
+      <FiMap /> Select location manually on map
+    </button>
+  </div>
+)}
 
           {/* Type Selection */}
           <div>
